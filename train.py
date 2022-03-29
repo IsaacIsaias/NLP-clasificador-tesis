@@ -269,5 +269,33 @@ model = AutoModelForSequenceClassification.from_pretrained("sgugger/my-awesome-m
 
 
 
-We can now finetune our model by just calling the train method:
+#We can now finetune our model by just calling the train method:
+
+
+
+#Bibliografy:
+# Pipelines for inference
+#https://huggingface.co/docs/transformers/pipeline_tutorial
+
+# Fine-tune a pretrained model
+#https://huggingface.co/docs/transformers/training
+
+# Preprocess
+# Uff durisimo
+
+#https://huggingface.co/docs/transformers/preprocessing
+
+#Text classification
+#https://huggingface.co/docs/transformers/tasks/sequence_classification
+
+# How to fine-tune a model for common downstream tasks
+#https://huggingface.co/docs/transformers/custom_datasets
+
+#Create a Dataset
+#https://huggingface.co/docs/datasets/about_dataset_load
+#https://huggingface.co/docs/datasets/dataset_script
+
+
+#Paperspace HPC
+#https://www.youtube.com/watch?v=bZ2bY5w7s10
 
