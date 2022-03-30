@@ -76,6 +76,7 @@ def process(ex):
     return {"titulo": ex["titulo"], "labels": emotion_features["carrera"].names.index(ex["carrera"])}
 dataset = dataset.map(process, features=emotion_features)
 
+
 dataset_size = df.shape[0]
 trainIndex = int (dataset_size*0.8)
 test_index = dataset_size - trainIndex
