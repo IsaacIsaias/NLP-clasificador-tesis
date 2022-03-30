@@ -1,7 +1,7 @@
 import sys,os,argparse,time
 from huggingface_hub import notebook_login
 import transformers
-from datasets import load_dataset, load_metric, Features, Value, ClassLabel
+from datasets import load_dataset, load_metric, Features, Value, ClassLabel,  Dataset
 import datasets
 import random
 import pandas as pd
@@ -34,7 +34,7 @@ args = parser
 
 DIRECTORY_ADDRES = 'datasets'
 
-FILE_NAME = 'information.csv'
+FILE_NAME = '_information.csv'
 
 df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names = ['autor','titulo','año','carrera'], header=None)
 
@@ -54,27 +54,35 @@ df = df.sample(frac = 1)
 string_text = str(df['carrera'].values)
 print (set(df['carrera'].to_list()))
 
-
 classSetOfTesisClasiication = set(df['carrera'].to_list())
 sizeOfClassClassification = len (classSetOfTesisClasiication)
-#Size of rows
 class_names = list(classSetOfTesisClasiication)
+
+
+#dataset_from_pandas.cast_column("carrera", ClassLabel(num_classes=sizeOfClassClassification, names=class_names, names_file=None, id=None))
+
+#Size of rows
+
 #Bibliografy:
 #  https://huggingface.co/docs/datasets/v1.11.0/loading_datasets.html
 #  https://huggingface.co/docs/datasets/loading
 #  https://towardsdatascience.com/my-experience-with-uploading-a-dataset-on-huggingfaces-dataset-hub-803051942c2d
 #
 #
+class_names=["Enseñanza de Inglés","Español","Historia"]
 emotion_features = Features({'titulo': Value('string'), 'carrera': ClassLabel(names=class_names)})
 #column_names=['texts','labels'],
 #, features=emotion_features
-dataset = load_dataset('csv',  data_files=DIRECTORY_ADDRES + os.path.sep + FILE_NAME, column_names=['titulo', 'carrera'])
+#dataset_from_pandas = Dataset.from_pandas(df,features=emotion_features )
+dataset = load_dataset('csv', delimiter=";", data_files=DIRECTORY_ADDRES + os.path.sep + FILE_NAME, column_names=['titulo', 'carrera'])
 
 import ast
 # load the dataset and copy the features
 def process(ex):
-    return {"titulo": ex["titulo"], "labels": emotion_features["carrera"].names.index(ex["carrera"])}
-dataset = dataset.map(process, features=emotion_features)
+    ex["carrera"]: emotion_features["carrera"].names.index(ex["carrera"])
+    return ex
+dataset = dataset.map(process)
+dataset.features = emotion_features
 
 
 dataset_size = df.shape[0]
