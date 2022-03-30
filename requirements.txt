@@ -24,3 +24,4 @@ wsproto==1.1.0
 datasets
 transformers
 huggingface_hub
+sklearn

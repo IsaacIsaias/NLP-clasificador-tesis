@@ -1,10 +1,11 @@
 import sys,os,argparse,time
 from huggingface_hub import notebook_login
 import transformers
-from datasets import load_dataset, load_metric
+from datasets import load_dataset, load_metric, Features, Value, ClassLabel
 import datasets
 import random
 import pandas as pd
+from sklearn.utils import shuffle
 
 from IPython.display import display, HTML
 
@@ -29,6 +30,68 @@ parser.add_argument("--num_train_epochs",
 
 
 args = parser
+
+
+DIRECTORY_ADDRES = 'datasets'
+
+FILE_NAME = 'information.csv'
+
+df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names = ['autor','titulo','año','carrera'], header=None)
+
+# for index, row in df.iterrows():
+#    if index > 0:
+#      print(row['autor'], row['titulo'],row['año'],row['carrera'])
+
+###Transform in dataset data strctured
+#Shuffle elements
+
+#Bibliografy:
+#
+# https://www.geeksforgeeks.org/pandas-how-to-shuffle-a-dataframe-rows/
+#
+# Shuffle the DataFrame rows
+df = df.sample(frac = 1)
+string_text = str(df['carrera'].values)
+print (set(df['carrera'].to_list()))
+
+
+classSetOfTesisClasiication = set(df['carrera'].to_list())
+sizeOfClassClassification = len (classSetOfTesisClasiication)
+#Size of rows
+class_names = list(classSetOfTesisClasiication)
+#Bibliografy:
+#  https://huggingface.co/docs/datasets/v1.11.0/loading_datasets.html
+#  https://huggingface.co/docs/datasets/loading
+#  https://towardsdatascience.com/my-experience-with-uploading-a-dataset-on-huggingfaces-dataset-hub-803051942c2d
+#
+#
+emotion_features = Features({'titulo': Value('string'), 'carrera': ClassLabel(names=class_names)})
+#column_names=['texts','labels'],
+#, features=emotion_features
+dataset = load_dataset('csv',  data_files=DIRECTORY_ADDRES + os.path.sep + FILE_NAME, column_names=['titulo', 'carrera'])
+
+import ast
+# load the dataset and copy the features
+def process(ex):
+    return {"titulo": ex["titulo"], "labels": emotion_features["carrera"].names.index(ex["carrera"])}
+dataset = dataset.map(process, features=emotion_features)
+
+dataset_size = df.shape[0]
+trainIndex = int (dataset_size*0.8)
+test_index = dataset_size - trainIndex
+validIndex = trainIndex+1
+testSplitSize = dataset_size*0.1
+validIndexTuple = (validIndex, (validIndex + int(testSplitSize)))
+testIndex = validIndex +  int(testSplitSize)  + 1
+testIndexTuple = (testIndex, (testIndex + int(testSplitSize)))
+#
+# Bibliografy
+# https://www.geeksforgeeks.org/split-pandas-dataframe-by-rows/
+#
+train_df = df.iloc[:trainIndex,:]
+valid_df = df.iloc[validIndexTuple[0]:validIndexTuple[1],:]
+test_df  = df.iloc[testIndexTuple[0]:testIndexTuple[1],:]
+###Split in test, dev and train
 
 print(transformers.__version__)
 notebook_login()
