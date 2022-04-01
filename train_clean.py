@@ -6,9 +6,7 @@ import datasets
 import random
 import pandas as pd
 from sklearn.utils import shuffle
-
 from IPython.display import display, HTML
-
 from transformers import AutoModelForSequenceClassification, TrainingArguments, Trainer
 
 
@@ -37,9 +35,9 @@ FILE_NAME = '_information.csv'
 
 df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, delimiter=";", names = ['autor','titulo','año','carrera'], header=None)
 
-for index, row in df.iterrows():
-   if index > 0:
-     print(row['autor'], row['titulo'],row['año'],row['carrera'])
+# for index, row in df.iterrows():
+#    if index > 0:
+#      print(row['autor'], row['titulo'],row['año'],row['carrera'])
 
 ###Transform in dataset data strctured
 #Shuffle elements
@@ -70,45 +68,15 @@ class_names = list(classSetOfTesisClasiication)
 #
 class_names=["Enseñanza de Inglés","Español","Historia"]
 emotion_features = Features({'titulo': Value('string'), 'carrera': ClassLabel(names=class_names)})
-#column_names=['texts','labels'],
-#, features=emotion_features
-#dataset_from_pandas = Dataset.from_pandas(df,features=emotion_features )
-#dataset = load_dataset('csv', delimiter=";", data_files=DIRECTORY_ADDRES + os.path.sep + FILE_NAME, column_names=['titulo', 'carrera'])
 
-import ast
-# load the dataset and copy the features
-# def process(ex):
-#     ex['carrera']: emotion_features['carrera'].names.index(ex['carrera'])
-#     return ex
-# dataset = dataset.map(process)
-# dataset.features = emotion_features
-
-
-dataset_size = df.shape[0]
-trainIndex = int (dataset_size*0.8)
-test_index = dataset_size - trainIndex
-validIndex = trainIndex+1
-testSplitSize = dataset_size*0.1
-validIndexTuple = (validIndex, (validIndex + int(testSplitSize)))
-testIndex = validIndex +  int(testSplitSize)  + 1
-testIndexTuple = (testIndex, (testIndex + int(testSplitSize)))
-#
-# Bibliografy
-# https://www.geeksforgeeks.org/split-pandas-dataframe-by-rows/
-#
-train_df = df.iloc[:trainIndex,:]
-valid_df = df.iloc[validIndexTuple[0]:validIndexTuple[1],:]
-test_df  = df.iloc[testIndexTuple[0]:testIndexTuple[1],:]
 ###Split in test, dev and train
 dataset = Dataset.from_pandas(df)
-print(transformers.__version__)
 
 def process(ex):
     ex['carrera']: emotion_features['carrera'].names.index(ex['carrera'])
     return ex
 dataset = dataset.map(process)
 dataset = dataset.train_test_split(test_size=0.1)
-
 print (dataset["train"][0])
 
 notebook_login()
