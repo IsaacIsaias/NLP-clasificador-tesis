@@ -34,9 +34,10 @@ args = parser
 
 
 DIRECTORY_ADDRES = 'datasets'
-FILE_NAME = '_information.csv'
+FILE_NAME = 'expreprocessed_data_pipe.csv'
 
-df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, delimiter=";", names = ['autor','titulo','año','carrera'], header=None)
+df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, delimiter="|", names = ['texto','autor_nombre','autor_apellido','titulo','año','carrera'], header=None)
+
 
 # for index, row in df.iterrows():
 #    if index > 0:
@@ -70,7 +71,7 @@ class_names = list(classSetOfTesisClasiication)
 #
 #
 class_names=["Enseñanza de Inglés","Español","Historia"]
-emotion_features = Features({'titulo': Value('string'), 'carrera': ClassLabel(names=class_names)})
+emotion_features = Features({'texto': Value('string'), 'carrera': ClassLabel(names=class_names)})
 
 ###Split in test, dev and train
 dataset = Dataset.from_pandas(df)
