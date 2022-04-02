@@ -34,11 +34,13 @@ args = parser
 
 
 DIRECTORY_ADDRES = 'datasets'
-FILE_NAME = 'expreprocessed_data_pipe.csv'
+FILE_NAME = 'preprocessed_data_pipe.csv'
+#
+#
+df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =  ['texto','autor_nombre','autor_apellido','titulo','año','carrera'], delimiter="|", header=None,skiprows = 1)
 
-df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, delimiter="|", names = ['texto','autor_nombre','autor_apellido','titulo','año','carrera'], header=None)
-
-
+columns = ['titulo', 'carrera']
+df = pd.DataFrame(df, columns=columns)
 # for index, row in df.iterrows():
 #    if index > 0:
 #      print(row['autor'], row['titulo'],row['año'],row['carrera'])
@@ -54,6 +56,7 @@ df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, delimiter="|", nam
 df = df.sample(frac = 1)
 string_text = str(df['carrera'].values)
 print (set(df['carrera'].to_list()))
+print (df['titulo'])
 
 classSetOfTesisClasiication = set(df['carrera'].to_list())
 sizeOfClassClassification = len (classSetOfTesisClasiication)
@@ -76,10 +79,10 @@ emotion_features = Features({'texto': Value('string'), 'carrera': ClassLabel(nam
 ###Split in test, dev and train
 dataset = Dataset.from_pandas(df)
 
-def process(ex):
-    ex['carrera']: emotion_features['carrera'].names.index(ex['carrera'])
-    return ex
-dataset = dataset.map(process)
+# def process(ex):
+#     ex['carrera']: emotion_features['carrera'].names.index(ex['carrera'])
+#     return ex
+# dataset = dataset.map(process)
 
 dataset = dataset.train_test_split(test_size=0.1)
 print (dataset["train"][0])
@@ -143,26 +146,53 @@ data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
 #Fine-tune with Trainer
 
-model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=len(emotion_features['carrera'].names))
+#model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=len(emotion_features['carrera'].names))
 
 #Define Trainer argument
+
+from datasets import load_metric
+metric = load_metric("accuracy")
+
+
+def compute_metrics(eval_pred):
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    return metric.compute(predictions=predictions, references=labels)
+
 training_args = TrainingArguments(
     output_dir="./finetunigmodel",
     learning_rate=2e-5,
-    per_device_train_batch_size=16,
-    per_device_eval_batch_size=16,
+    per_device_train_batch_size=2,
+    per_device_eval_batch_size=2,
     num_train_epochs=2,
     weight_decay=0.01,
+    gradient_accumulation_steps=2
 )
 
+training_args = TrainingArguments(output_dir="./finetunigmodel", evaluation_strategy="epoch")
+
 trainer = Trainer(
+
     model=model,
+
     args=training_args,
+
     train_dataset=dataset["train"],
+
     eval_dataset=dataset["test"],
-    tokenizer=tokenizer,
-    data_collator=data_collator,
+
+    compute_metrics=compute_metrics,
+
 )
+
+# trainer = Trainer(
+#     model=model,
+#     args=training_args,
+#     train_dataset=dataset["train"],
+#     eval_dataset=dataset["test"],
+#     tokenizer=tokenizer,
+#     data_collator=data_collator,
+# )
 
 trainer.train()
 
