@@ -7,8 +7,11 @@ import random
 import pandas as pd
 from sklearn.utils import shuffle
 from IPython.display import display, HTML
+
 from transformers import AutoModelForSequenceClassification, TrainingArguments, Trainer
 
+from transformers import AutoTokenizer
+from transformers import DataCollatorWithPadding
 
 
 parser = argparse.ArgumentParser()
@@ -76,9 +79,91 @@ def process(ex):
     ex['carrera']: emotion_features['carrera'].names.index(ex['carrera'])
     return ex
 dataset = dataset.map(process)
+
 dataset = dataset.train_test_split(test_size=0.1)
 print (dataset["train"][0])
+print (dataset["test"][0])
 
+spanish_models = {'BETO':"hiiamsid/BETO_es_binary_classification",'Bertin':"bertin-project/bertin-base-xnli-es"}
+#################################################################################################
+# Example:
+#
+# https://benjad.github.io/2020/08/04/clasificador-sentimiento-BERT/
+#
+# Resources
+# Spanish Modelss
+#
+#
+# bertin-project/bertin-roberta-base-spanish https://huggingface.co/bertin-project/bertin-roberta-base-spanish
+#
+# bertin-project/bertin-base-xnli-es https://huggingface.co/bertin-project/bertin-base-xnli-es
+#
+# PlanTL-GOB-ES/roberta-large-bne https://huggingface.co/PlanTL-GOB-ES/roberta-large-bne
+#
+# PlanTL-GOB-ES/roberta-base-bne https://huggingface.co/PlanTL-GOB-ES/roberta-base-bne
+#
+# mrm8488/electricidad-base-discriminator https://huggingface.co/mrm8488/electricidad-base-discriminator
+#
+#flax-community/spanish-t5-small https://huggingface.co/flax-community/spanish-t5-small
+#################################################################################################
+
+spanish_models = {'BETO':"hiiamsid/BETO_es_binary_classification",
+                  'ROBERTA_E':"bertin-project/bertin-roberta-base-spanish",
+                  'BERTIN': "bertin-project/bertin-base-xnli-es",
+                  'ROBERT_GOB':"PlanTL-GOB-ES/roberta-large-bne",
+                  'ROBERT_GOB_PLUS':"PlanTL-GOB-ES/roberta-base-bne",
+                  'ELECTRA':"mrm8488/electricidad-base-discriminator",
+                  'ELECTRA_SMALL':"flax-community/spanish-t5-small"
+                  }
+
+#"hiiamsid/BETO_es_binary_classification",cache_dir =
+
+tokenizer = AutoTokenizer.from_pretrained(spanish_models['BETO'] ,use_fast=False)
+model = AutoModelForSequenceClassification.from_pretrained(spanish_models['BETO'])
+
+
+# tokenizer = AutoTokenizer.from_pretrained( "." + os.path.sep + "models" + os.path.sep + "beto" + os.path.sep,use_fast=False)
+# model = AutoModelForSequenceClassification.from_pretrained("." + os.path.sep + "models" + os.path.sep + "beto" + os.path.sep)
+
+text = "Replace me by any text you'd like."
+
+def preprocess_function(examples):
+    return tokenizer(examples["titulo"], truncation=True)
+
+tokenized_snpanish = dataset.map(preprocess_function, batched=True)
+
+# Use DataCollatorWithPadding to create a batch of examples.
+# It will also dynamically pad your text to the length of the
+# longest element in its batch, so they are a uniform length.
+# While it is possible to pad your text in the tokenizer function by setting padding=True,
+# dynamic padding is more efficient.
+
+data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
+
+#Fine-tune with Trainer
+
+model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=len(emotion_features['carrera'].names))
+
+#Define Trainer argument
+training_args = TrainingArguments(
+    output_dir="./finetunigmodel",
+    learning_rate=2e-5,
+    per_device_train_batch_size=16,
+    per_device_eval_batch_size=16,
+    num_train_epochs=2,
+    weight_decay=0.01,
+)
+
+trainer = Trainer(
+    model=model,
+    args=training_args,
+    train_dataset=dataset["train"],
+    eval_dataset=dataset["test"],
+    tokenizer=tokenizer,
+    data_collator=data_collator,
+)
+
+trainer.train()
 
 notebook_login()
 
@@ -95,6 +180,9 @@ metric = load_metric('glue', actual_task)
 dataset
 
 dataset["train"][0]
+dataset["test"][0]
+
+
 
 
 def show_random_elements(dataset, num_examples=10):
@@ -127,7 +215,10 @@ metric.compute(predictions=fake_preds, references=fake_labels)
 
 #PREPROCESSING DATA
 
-# Before we can feed those texts to our model, we need to preprocess them. This is done by a 🤗 Transformers Tokenizer which will (as the name indicates) tokenize the inputs (including converting the tokens to their corresponding IDs in the pretrained vocabulary) and put it in a format the model expects, as well as generate the other inputs that model requires.
+# Before we can feed those texts to our model, we need to preprocess them. This is done by
+# a 🤗 Transformers Tokenizer which will (as the name indicates) tokenize the inputs
+# (including converting the tokens to their corresponding IDs in the pretrained vocabulary) and put
+# it in a format the model expects, as well as generate the other inputs that model requires.
 #
 # To do all of this, we instantiate our tokenizer with the AutoTokenizer.from_pretrained method, which will ensure:
 #
