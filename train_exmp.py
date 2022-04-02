@@ -15,6 +15,7 @@ import time
 import datetime
 import random
 from sklearn.metrics import confusion_matrix
+import pickle
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--bert_model", default='BETO', type=str, help="Name of spanish bert model: BETO, ROBERTA_E, BERTIN, ROBERT_GOB \
@@ -64,6 +65,9 @@ class_names = list(set(sentiment))
 sizeOfClass = len(set(class_names))
 emotion_features = Features({'texto': Value('string'), 'carrera': ClassLabel(names=class_names)})
 classIndex = [ emotion_features['carrera'].names.index(x) for x in emotion_features['carrera'].names]
+
+classIndexTuple = dict(zip(classIndex,class_names))
+
 sentiment = sentiment.replace(class_names,classIndex)
 
 
@@ -342,4 +346,20 @@ modelToSaveIn = path
 model.save_pretrained(modelToSaveIn)
 ###Save in File the Correspondence between
 ## Number and Class to load in clasification processs
-## with sistem
+## with system
+
+
+print('Weights before pickling')
+
+# Open a file to write bytes
+p_file = open(modelToSaveIn + os.path.sep + 'classIndexAssociation.pkl', 'wb')
+
+# Pickle the object
+pickle.dump(classIndexTuple, p_file)
+p_file.close()
+
+# Deserialization of the file
+file = open(modelToSaveIn + os.path.sep + 'classIndexAssociation.pkl', 'rb')
+new_model = pickle.load(file)
+
+print('Weights after pickling', new_model)
