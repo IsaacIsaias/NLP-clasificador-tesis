@@ -215,8 +215,8 @@ model = AutoModelForSequenceClassification.from_config(config)
 
 model.config.id2label = indexClassTuple
 model.config.label2id = classIndexTuple
-model.config._num_labels = len(sizeOfClass) ## replacing 9 by 13
-model.config.num_labels = len(sizeOfClass)
+model.config._num_labels = sizeOfClass ## replacing 9 by 13
+model.config.num_labels = sizeOfClass
 
 
 optimizer = AdamW(model.parameters(),
