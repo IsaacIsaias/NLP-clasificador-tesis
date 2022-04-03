@@ -61,7 +61,7 @@ device = torch.device(run_on)
 DIRECTORY_ADDRES = 'datasets'
 FILE_NAME = 'dataset_tesis.csv'
 
-df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =  ['texto','autor_nombre','autor_apellido','titulo','año','carrera'], delimiter="|", header=None,skiprows = 1)
+df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =  ['texto','autor_nombre','autor_apellido','titulo','año','carrera'], delimiter="|", header=None,skiprows = 1, encoding='ISO-8859-1',  engine='python')
 
 train_option = ['titulo','texto']
 train_field = args.train_field
@@ -189,6 +189,13 @@ set_seed(42)
 
 # Create model and optimizer
 #model = AutoModelForSequenceClassification.from_pretrained(spanish_models['BETO'])
+
+
+#Fix model class rearrange problem
+#Bibliografy:
+#
+#  https://discuss.huggingface.co/t/how-do-i-change-the-classification-head-of-a-model/4720/21
+#
 
 config = AutoConfig.from_pretrained(spanish_models[model_name])
 config.num_labels = sizeOfClass
@@ -391,15 +398,15 @@ def training(n_epochs, training_dataloader,
 training(epochs, train_dataloader, val_dataloader)
 
 #Save the Model
-path = os.path.join("./finetunigmodel", spanish_models['BETO'])
+path = os.path.join("./finetunigmodel", spanish_models[model_name])
 if not os.path.exists(path):
      # Handle the errors
     try:
         # Create the directory in the path
         os.makedirs(path, exist_ok=True)
-        print("Directory %s Created Successfully" % spanish_models['BETO'])
+        print("Directory %s Created Successfully" % spanish_models[model_name])
     except OSError as error:
-        print("Directory %s Creation Failed" % spanish_models['BETO'])
+        print("Directory %s Creation Failed" % spanish_models[model_name])
 
 modelToSaveIn = path
 
