@@ -59,7 +59,7 @@ device = torch.device(run_on)
 # Load the dataset into a pandas dataframe.
 #df = pd.read_csv('/reviewsclean.csv', header=0)
 DIRECTORY_ADDRES = 'datasets'
-FILE_NAME = 'expreprocessed_data_pipe.csv'
+FILE_NAME = 'dataset_tesis.csv'
 
 df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =  ['texto','autor_nombre','autor_apellido','titulo','año','carrera'], delimiter="|", header=None,skiprows = 1)
 
@@ -80,6 +80,7 @@ emotion_features = Features({'texto': Value('string'), 'carrera': ClassLabel(nam
 classIndex = [ emotion_features['carrera'].names.index(x) for x in emotion_features['carrera'].names]
 
 classIndexTuple = dict(zip(classIndex,class_names))
+indexClassTuple =  dict(zip(class_names,classIndex))
 
 sentiment = sentiment.replace(class_names,classIndex)
 
@@ -191,6 +192,19 @@ set_seed(42)
 model = AutoModelForSequenceClassification.from_pretrained(
         spanish_models[model_name], num_labels=sizeOfClass, output_attentions=False,
          output_hidden_states=False)
+
+#Replace for avoiding error in last final class number
+#Bibliografy:
+#
+#  https://discuss.huggingface.co/t/replacing-last-layer-of-a-fine-tuned-model-to-use-different-set-of-labels/12995/5
+#
+
+
+model.config.id2label = indexClassTuple
+model.config.label2id = classIndexTuple
+model.config._num_labels = len(sizeOfClass) ## replacing 9 by 13
+model.config.num_labels = len(sizeOfClass)
+
 
 optimizer = AdamW(model.parameters(),
                   lr = 4e-5,
