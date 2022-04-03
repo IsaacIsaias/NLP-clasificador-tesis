@@ -2,7 +2,7 @@ import torch
 from transformers import  BertTokenizer
 from torch.utils.data import TensorDataset
 from torch.utils.data import DataLoader, SequentialSampler
-from transformers import BertForSequenceClassification, AutoModelForSequenceClassification, AdamW
+from transformers import BertForSequenceClassification, AutoConfig, AutoModelForSequenceClassification, AdamW
 from transformers import get_linear_schedule_with_warmup
 from transformers import AutoTokenizer
 from datasets import load_dataset, load_metric, Features, Value, ClassLabel,  Dataset
@@ -189,9 +189,15 @@ set_seed(42)
 
 # Create model and optimizer
 #model = AutoModelForSequenceClassification.from_pretrained(spanish_models['BETO'])
-model = AutoModelForSequenceClassification.from_pretrained(
-        spanish_models[model_name], num_labels=sizeOfClass, output_attentions=False,
-         output_hidden_states=False)
+
+config = AutoConfig.from_pretrained(spanish_models[model_name])
+config.num_labels = sizeOfClass
+config.output_hidden_states=False
+model = AutoModelForSequenceClassification.from_config(config)
+
+# model = AutoModelForSequenceClassification.from_pretrained(
+#         , num_labels=sizeOfClass, output_attentions=False,
+#          output_hidden_states=False)
 
 #Replace for avoiding error in last final class number
 #Bibliografy:
