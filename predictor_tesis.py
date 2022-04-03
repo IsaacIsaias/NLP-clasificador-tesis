@@ -57,19 +57,40 @@ def classifyText(_text, model_name):
               model = AutoModelForSequenceClassification.from_pretrained(
                    path, num_labels=sizeOfClass, output_attentions=False,
                   output_hidden_states=False)
-              pipe = TextClassificationPipeline(model=model, tokenizer=tokenizer, return_all_scores=True)
-              # Put the model in evaluation mode
-              classificationResult = pipe(_text)
-              if  classificationResult[0]  != None and len (classificationResult[0]) > 0:
-                  #Order the result with more close to 1
-                  classificationResult[0].sort(reverse=True, key=lambda x:x['score'])
-                  # Return the text clasification
-                  keyClass = classificationResult[0][0]['label']
-                  keyClass = keyClass.replace("LABEL_","").strip()
-                  if  keyClass.isnumeric():
-                    return new_model[ int (keyClass)]
-                  else:
-                      raise Exception("Not exist class info")
+              #Bibliografy from:
+              #
+              #  https://huggingface.co/docs/transformers/main_classes/output
+              #
+              inputs = tokenizer(_text, return_tensors="pt")
+              labels = torch.tensor([1]).unsqueeze(0)  # Batch size 1
+              outputs = model(**inputs, labels=labels)
+
+              loss, logits = outputs[:2]
+
+              #Transform in array
+              logits = logits.detach().cpu().numpy()
+
+              #Get max element and position
+              result = logits.argmax()
+              return new_model[result]
+
+              #Example from
+              #
+              #
+              #
+              # pipe = TextClassificationPipeline(model=model, tokenizer=tokenizer, return_all_scores=True)
+              # # Put the model in evaluation mode
+              # classificationResult = pipe(_text)
+              # if  classificationResult[0]  != None and len (classificationResult[0]) > 0:
+              #     #Order the result with more close to 1
+              #     classificationResult[0].sort(reverse=True, key=lambda x:x['score'])
+              #     # Return the text clasification
+              #     keyClass = classificationResult[0][0]['label']
+              #     keyClass = keyClass.replace("LABEL_","").strip()
+              #     if  keyClass.isnumeric():
+              #       return new_model[ int (keyClass)]
+              #     else:
+              #         raise Exception("Not exist class info")
                   # model.eval()
                   # outputs = model(X_val_inputs,
                   #                 token_type_ids=None,

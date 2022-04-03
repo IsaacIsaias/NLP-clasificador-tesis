@@ -25,4 +25,4 @@ datasets
 transformers
 huggingface_hub
 sklearn
-cPickle
+
