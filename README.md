@@ -14,9 +14,7 @@ Este scraper obtiene de esta base de datos:
   -  Año de la Tesis
   -  Carrera de la Tesis
 
-A la vez, este scraper descarga cada una de las tesis en la carpeta Downloads del equipo local.
-
-En el csv formado por el scraper se añadió el Resumen/Introduccion/Conclusion de la tesis, dependiendo cual primero estuviera disponible, ya que la complejidad recae en la diferencia de la estructura y formato de cada una de las tesis.
+A la vez, este scraper descarga cada una de las tesis en la carpeta Downloads del equipo local. En el csv formado por el scraper se añadió el "Resumen/Introduccion/Conclusion de la tesis", dependiendo cual primero estuviera disponible, ya que la complejidad recae en la diferencia de la estructura y formato de cada una de las tesis.
 
 El dataset fue procesado con las siguientes tareas (dataset_tesis_procesado.csv):
 - convertir a minúsculas
