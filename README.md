@@ -28,4 +28,4 @@ Miembros de equipo (user de Hugging Face):
 - Isacc Isahias López López (MajorIsaiah)
 - Dionis López (inoid)
 - Yisel Clavel Quintero (clavel)
-- Ximyer Yeraldin López López (Ximyer)
+- Ximena Yeraldin López López (Ximyer)
