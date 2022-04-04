@@ -41,21 +41,21 @@ def classifyText(_text, model_name):
                        }
 
      if model_name != "" and model_name != None and model_name in spanish_models:
-         path = os.path.join("./finetunigmodel", spanish_models[model_name])
-         if os.path.exists(path):
+              path = os.path.join("./finetunigmodel", spanish_models[model_name])
+         #if os.path.exists(path):
               ###Transform in token data
               tokenizer = AutoTokenizer.from_pretrained(spanish_models[model_name], use_fast=False)
               X_val_inputs, X_val_masks = preprocessingtext(_text,tokenizer)
               t0 = time.time()
 
               # Deserialization of the file
-              file = open(path + os.path.sep + 'classIndexAssociation.pkl', 'rb')
-              new_model = pickle.load(file)
+              #file = open(path + os.path.sep + 'classIndexAssociation.pkl', 'rb')
+              #new_model = pickle.load(file)
 
-              sizeOfClass = len(new_model)
+              #sizeOfClass = len(new_model)
 
               model = AutoModelForSequenceClassification.from_pretrained(
-                   path, num_labels=sizeOfClass, output_attentions=False,
+                   'hackathon-pln-es/unam_tesis_BETO_finnetuning', num_labels=5, output_attentions=False,
                   output_hidden_states=False)
               #Bibliografy from:
               #
@@ -108,8 +108,8 @@ def classifyText(_text, model_name):
                   # keyClass = sorted_tuples.keys()[0]
                   # return new_model[keyClass]
 
-         else:
-             raise Exception("Not exist model info")
+         # else:
+         #     raise Exception("Not exist model info")
      else:
         raise Exception("Not exist model info")
      return "Text"

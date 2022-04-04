@@ -32,7 +32,7 @@ parser.add_argument("--eval_batch_size",
                     type=int,
                     help="Total batch size for eval.")
 parser.add_argument("--num_train_epochs",
-                    default=6,
+                    default=3,
                     type=int,
                     help="Total number of training epochs to perform.")
 
@@ -59,7 +59,7 @@ device = torch.device(run_on)
 # Load the dataset into a pandas dataframe.
 #df = pd.read_csv('/reviewsclean.csv', header=0)
 DIRECTORY_ADDRES = 'datasets'
-FILE_NAME = 'dataset_tesis.csv'
+FILE_NAME = 'dataset_tesis_procesado.csv'
 
 df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =  ['texto','autor_nombre','autor_apellido','titulo','año','carrera'], delimiter="|", header=None,skiprows = 1, encoding='ISO-8859-1',  engine='python')
 
@@ -213,8 +213,9 @@ model = AutoModelForSequenceClassification.from_config(config)
 #
 
 
-model.config.id2label = indexClassTuple
-model.config.label2id = classIndexTuple
+
+model.config.id2label = classIndexTuple
+model.config.label2id = indexClassTuple
 model.config._num_labels = sizeOfClass ## replacing 9 by 13
 model.config.num_labels = sizeOfClass
 
