@@ -1,6 +1,7 @@
 import re
 import string
 import pandas as pd
+import numpy as np
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
@@ -30,7 +31,8 @@ def cargar_dataset_csv ():
     dataframe = pd.read_csv('./datasets/dataset_tesis.csv', encoding='ISO-8859-1', sep='|', engine='python')
     dataframe.columns = ['texto','autor_nombre','autor_apellido','titulo','año','carrera']
     print(dataframe.head())
-    print(dataframe.columns)
+    df = dataframe.groupby(["carrera"])["texto"].count()
+    print(df)
     return dataframe
 
 
@@ -45,7 +47,7 @@ def preprocess (text):
     # tokenizer = nltk.RegexpTokenizer('\w+|\$[\d\.]+|\S+') # no elimina signos de puntuación, separa las fechas y los correos
     # tokens = tokenizer.tokenize(sentence)
     print(tokens)
-    tokens = set(tokens)  # eliminar palabras repetidas
+    #tokens = set(tokens)  # eliminar palabras repetidas pero no quedan en orden de aparición
     words = [word for word in tokens if word.isalnum()]  # elimina los string que no son alfanuméricos
     print(words)
 
@@ -83,22 +85,20 @@ textos_procesados = []
 titulos_procesados = []
 
 for i in range(len(texto)):
-    #print(texto[i])
+    print(texto[i])
     textos_procesados.append(preprocess(texto[i]))
 
 for j in range(len(titulo)):
-    #print(texto[j])
+    print(titulo[j])
     titulos_procesados.append(preprocess(titulo[j]))
 
-file = open('datasets/dataset_tesis_procesado.csv', 'w', encoding='ISO-8859-1')
+file = open('datasets/dataset_tesis_procesado.csv', 'w', encoding='utf-8') #ISO-8859-1
 file.write('texto|titulo|carrera' + '\n')
 for k in range(len(textos_procesados)):
     for a in textos_procesados[k]:
-        #print(a)
         file.write(str(a) + ' ')
     file.write('|')
     for b in titulos_procesados[k]:
-        #print(b)
         file.write(str(b) + ' ')
     file.write('|' + str(carrera[k]) + '\n')
 file.close()
