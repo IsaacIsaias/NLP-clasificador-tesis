@@ -59,7 +59,7 @@ device = torch.device(run_on)
 # Load the dataset into a pandas dataframe.
 #df = pd.read_csv('/reviewsclean.csv', header=0)
 DIRECTORY_ADDRES = 'datasets'
-FILE_NAME = 'dataset_tesis.csv'
+FILE_NAME = 'dataset_tesis_procesado.csv'
 
 df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =  ['texto','autor_nombre','autor_apellido','titulo','año','carrera'], delimiter="|", header=None,skiprows = 1, encoding='ISO-8859-1',  engine='python')
 
