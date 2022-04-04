@@ -8,11 +8,11 @@ Para ello, en primer lugar se consultó la Oferta Académica de la Universidad, 
 
 Este scraper obtiene de esta base de datos:
 
-    Nombres del Autor
-    Apellidos del Autor
-    Título de la Tesis
-    Año de la Tesis
-    Carrera de la Tesis
+  -  Nombres del Autor
+  -  Apellidos del Autor
+  -  Título de la Tesis
+  -  Año de la Tesis
+  -  Carrera de la Tesis
 
 A la vez, este scraper descarga cada una de las tesis en la carpeta Downloads del equipo local.
 
