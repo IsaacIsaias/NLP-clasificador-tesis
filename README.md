@@ -1,6 +1,6 @@
 # NLP-clasificador-tesis
 
-Se creó un dataset (dataset_tesis.csv) a partir de un proceso de scraping donde se extrajeron tesis de la Universidad Autónoma de México (UNAM) en el siguiente link: https://tesiunam.dgb.unam.mx/F?func=find-b-0&local_base=TES01. Se extrajeron primeramente 200 tesis de 5 carreras de esta universidad: Actuaría, Derecho, Economía, Psicología y Química Farmacéutico Biológica. De estas se extrajo: introduscción, nombre del autor, apellidos de autor, título de la tesis y la carrera. 
+Se creó un dataset (dataset_tesis.csv) a partir de un proceso de scraping donde se extrajeron tesis de la Universidad Nacional Autónoma de México (UNAM) en el siguiente link: https://tesiunam.dgb.unam.mx/F?func=find-b-0&local_base=TES01. Se extrajeron primeramente 200 tesis de 5 carreras de esta universidad: Actuaría, Derecho, Economía, Psicología y Química Farmacéutico Biológica. De estas se extrajo: introduscción, nombre del autor, apellidos de autor, título de la tesis y la carrera. 
 
 Se optó por realizar un scraper para conseguir la información. Se decidió usar la base de datos TESIUNAM, la cual es un catálogo en donde se pueden visualizar las tesis de los sustentantes que obtuvieron un grado en la UNAM, así como de las tesis de licenciatura de escuelas incorporadas a ella.
 
