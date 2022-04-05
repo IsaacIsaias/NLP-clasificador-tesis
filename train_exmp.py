@@ -15,6 +15,7 @@ import time
 import datetime
 import random
 from sklearn.metrics import confusion_matrix
+from sklearn import metrics
 import pickle
 from transformers import TextClassificationPipeline
 
@@ -279,7 +280,7 @@ def flat_accuracy(preds, labels):
 
 # function to train the model
 def training(n_epochs, training_dataloader,
-             validation_dataloader):
+             validation_dataloader, labels_tag):
     # ========================================
     #               Training
     # ========================================
@@ -398,8 +399,12 @@ def training(n_epochs, training_dataloader,
             eval_accuracy += tmp_eval_accuracy
 
         # Report the final accuracy for this validation run.
+
+        f1 = metrics.f1_score(all_labels, np.argmax(all_logits, -1), labels=labels_tag, average='macro')
         print("  Accuracy: {0:.2f}".
               format(eval_accuracy / (step + 1)))
+        print("  F1-Macro: {0:.2f}".
+              format(f1 / (step + 1)))
         print("  Validation took: {:}".format(
             format_time(time.time() - t0)))
 
@@ -412,7 +417,7 @@ def training(n_epochs, training_dataloader,
 
 
 # call function to train the model
-training(epochs, train_dataloader, val_dataloader)
+training(epochs, train_dataloader, val_dataloader, labels_tag=idIndexClassTuple.keys())
 
 #Save the Model
 path = os.path.join("./finetunigmodel", spanish_models[model_name] + experimentName)
