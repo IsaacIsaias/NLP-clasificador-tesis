@@ -155,7 +155,7 @@ def split_dataset():
 
 
 # process_all_dataset()
-#split_dataset()
+# split_dataset()
 
 from datasets import load_dataset
 dataset = load_dataset("hackathon-pln-es/unam_tesis", split='train')
