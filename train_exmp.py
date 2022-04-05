@@ -22,7 +22,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--bert_model", default='BETO', type=str, help="Name of spanish bert model: BETO, ROBERTA_E, BERTIN, ROBERT_GOB \
 ROBERT_GOB_PLUS, ELECTRA, ELECTRA_SMALL")
 
-parser.add_argument("--train_field", default='titulo', type=str, help=" titulo, texto i.e., Name of UNAM thesis field to tuning the huggingface Spanish model")
+parser.add_argument("--train_field", default='titulo', type=str, help=" titulo, texto,  both, both-rev i.e., Name of UNAM thesis field to tuning the huggingface Spanish model")
 parser.add_argument("--train_batch_size",
                         default=32,
                         type=int,
@@ -40,6 +40,11 @@ parser.add_argument("--scope",
                     default="cpu",
                     type=str,
                     help="Scope of training gpu or cpu")
+
+parser.add_argument("--exprm",
+                    default="",
+                    type=str,
+                    help="Name for module finetuning creation e.g, BETO-both: Pretrained BETO model with Unam tesis texto and title concat")
 
 args  = parser.parse_args()
 
@@ -61,15 +66,21 @@ device = torch.device(run_on)
 DIRECTORY_ADDRES = 'datasets'
 FILE_NAME = 'dataset_tesis_procesado.csv'
 
-df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =  ['texto','autor_nombre','autor_apellido','titulo','año','carrera'], delimiter="|", header=None,skiprows = 1, encoding='ISO-8859-1',  engine='python')
+df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =  ['texto','autor_nombre','autor_apellido','titulo','año','carrera'], delimiter="|", header=None,skiprows = 1)
 
-train_option = ['titulo','texto']
+train_option = ['titulo','texto','both','both-rev']
 train_field = args.train_field
 if train_field == "" or train_field == None or ( not train_field in train_option):
     print("WARRRING BAT MODEL NAME INICIALIZATION SET BETO as DEFAULT")
     train_option =train_option[0]
 
-reviews = df[train_field]
+if train_field == "both":
+    reviews = df["texto"] + df["titulo"]
+elif train_field == "both-rev":
+    reviews = df["titulo"] + df["texto"]
+else:
+  reviews = df[train_field]
+
 
 #Class filed in datasets
 sentiment = df['carrera']
@@ -79,8 +90,8 @@ sizeOfClass = len(set(class_names))
 emotion_features = Features({'texto': Value('string'), 'carrera': ClassLabel(names=class_names)})
 classIndex = [ emotion_features['carrera'].names.index(x) for x in emotion_features['carrera'].names]
 
-classIndexTuple = dict(zip(classIndex,class_names))
-indexClassTuple =  dict(zip(class_names,classIndex))
+idIndexClassTuple = dict(zip(classIndex,class_names))
+classNameIndexTuple =  dict(zip(class_names,classIndex))
 
 sentiment = sentiment.replace(class_names,classIndex)
 
@@ -161,6 +172,11 @@ if batch_size <= 0 or batch_size == None:
 y_train_labels = torch.tensor(y_train.values)
 y_val_labels = torch.tensor(y_val.values)
 
+#Set experiment name
+experimentName = ""
+if args.exprm != None and args.exprm != "":
+    experimentName = args.exprm
+
 
 def dataloader(x_inputs, x_masks, y_labels):
     data = TensorDataset(x_inputs, x_masks, y_labels)
@@ -214,8 +230,8 @@ model = AutoModelForSequenceClassification.from_config(config)
 
 
 
-model.config.id2label = classIndexTuple
-model.config.label2id = indexClassTuple
+model.config.id2label = idIndexClassTuple
+model.config.label2id = classNameIndexTuple
 model.config._num_labels = sizeOfClass ## replacing 9 by 13
 model.config.num_labels = sizeOfClass
 
@@ -399,7 +415,7 @@ def training(n_epochs, training_dataloader,
 training(epochs, train_dataloader, val_dataloader)
 
 #Save the Model
-path = os.path.join("./finetunigmodel", spanish_models[model_name])
+path = os.path.join("./finetunigmodel", spanish_models[model_name] + experimentName)
 if not os.path.exists(path):
      # Handle the errors
     try:
@@ -423,7 +439,7 @@ print('Weights before pickling')
 p_file = open(modelToSaveIn + os.path.sep + 'classIndexAssociation.pkl', 'wb')
 
 # Pickle the object
-pickle.dump(classIndexTuple, p_file)
+pickle.dump(idIndexClassTuple, p_file)
 p_file.close()
 
 
