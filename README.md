@@ -16,17 +16,17 @@ Este scraper obtiene de esta base de datos:
 
 A la vez, este scraper descarga cada una de las tesis en la carpeta Downloads del equipo local. En el csv formado por el scraper se añadió el "Resumen/Introduccion/Conclusion de la tesis", dependiendo cual primero estuviera disponible, ya que la complejidad recae en la diferencia de la estructura y formato de cada una de las tesis.
 
-El dataset fue procesado con las siguientes tareas (dataset_tesis_procesado.csv):
+El dataset fue procesado con las siguientes tareas de Procesamiento de Lenguaje Natural (dataset_tesis_procesado.csv):
 - convertir a minúsculas
 - tokenización
 - eliminar palabras que no son alfanuméricas
 - elimanr palabras vacías
 - stemming: eliminar plurales
 
-Ambos datasets, el creado con el texto original y el procesado fueron subidos a https://huggingface.co/hackathon-pln-es/.
+Ambos datasets, el creado con el texto original y el procesado fueron subidos a https://huggingface.co/datasets/hackathon-pln-es/unam_tesis/.
 
 Se hizo finetunning a partir de modelos de transformes del estado del arte existentes en Hugging Face, los siguientes fueron subidos a https://huggingface.co/hackathon-pln-es/:
-- 'BETO': "inoid/unam_tesis_BETO_finnetuning",
+- 'BETO': "hackathon-pln-es/unam_tesis_BETO_finnetuning" (https://huggingface.co/hackathon-pln-es/unam_tesis_BETO_finnetuning),
 - 'ROBERTA_E': "inoid/unam_tesis_ROBERTA_es_finnetuning"
 - 'BERTIN': "inoid/unam_tesis_BERTIN_finnetuning"
 - 'ROBERT_GOB': "inoid/unam_tesis_ROBERTA_GOB_finnetuning",
@@ -34,11 +34,15 @@ Se hizo finetunning a partir de modelos de transformes del estado del arte exist
 - 'ELECTRA': "inoid/unam_tesis_ELECTRA_finnetuning",
 - 'ELECTRA_SMALL': "inoid/unam_tesis_ELECTRA_SMALL_finnetuning"
 
-# Cita
+## Demo
+
+Se creó un demo con [Gradio](https://github.com/gradio-app/gradio) disponible en un Space en Hugging Face en el siguiente enlace: https://huggingface.co/spaces/hackathon-pln-es/clasificador-de-tesis
+
+## Cita
 
 "Esta base de datos/modelo se ha creado/entrenado en el marco del Hackathon 2022 de PLN en Español organizado por Somos NLP patrocinado por Platzi, Paperspace y Hugging Face: https://huggingface.co/hackathon-pln-es."
 
-Miembros de equipo (user de Hugging Face):
+Miembros del equipo (user de Hugging Face):
 - Isacc Isahias López López (MajorIsaiah)
 - Dionis López (inoid)
 - Yisel Clavel Quintero (clavel)
