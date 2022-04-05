@@ -36,7 +36,7 @@ Se hizo finetunning a partir de modelos de transformes del estado del arte exist
 
 ## Demo
 
-Se creó un demo con @gradio-app/gradio disponible en un Space en Hugging Face en el siguiente enlace: https://huggingface.co/spaces/hackathon-pln-es/clasificador-de-tesis
+Se creó un demo con [Gradio](https://github.com/gradio-app/gradio) disponible en un Space en Hugging Face en el siguiente enlace: https://huggingface.co/spaces/hackathon-pln-es/clasificador-de-tesis
 
 ## Cita
 
