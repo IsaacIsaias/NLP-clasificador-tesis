@@ -34,11 +34,11 @@ Se hizo finetunning a partir de modelos de transformes del estado del arte exist
 - 'ELECTRA': "inoid/unam_tesis_ELECTRA_finnetuning",
 - 'ELECTRA_SMALL': "inoid/unam_tesis_ELECTRA_SMALL_finnetuning"
 
-# Demo
+## Demo
 
 Se creó un demo con @gradio-app/gradio disponible en un Space en Hugging Face en el siguiente enlace: https://huggingface.co/spaces/hackathon-pln-es/clasificador-de-tesis
 
-# Cita
+## Cita
 
 "Esta base de datos/modelo se ha creado/entrenado en el marco del Hackathon 2022 de PLN en Español organizado por Somos NLP patrocinado por Platzi, Paperspace y Hugging Face: https://huggingface.co/hackathon-pln-es."
 
