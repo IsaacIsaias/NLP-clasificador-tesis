@@ -76,9 +76,9 @@ if train_field == "" or train_field == None or ( not train_field in train_option
     train_option =train_option[0]
 
 if train_field == "both":
-    reviews = df["texto"] + df["titulo"]
+    reviews = df["texto"].astype(str) + df["titulo"]
 elif train_field == "both-rev":
-    reviews = df["titulo"] + df["texto"]
+    reviews = df["titulo"].astype(str) + df["texto"]
 else:
   reviews = df[train_field]
 
