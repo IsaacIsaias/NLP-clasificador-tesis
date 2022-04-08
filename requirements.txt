@@ -25,4 +25,5 @@ datasets
 transformers
 huggingface_hub
 sklearn
+matplotlib
 

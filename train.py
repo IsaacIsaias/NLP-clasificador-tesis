@@ -19,6 +19,8 @@ from sklearn import metrics
 import pickle
 from transformers import TextClassificationPipeline
 
+import matplotlib.pyplot as plt
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--bert_model", default='BETO', type=str, help="Name of spanish bert model: BETO, ROBERTA_E, BERTIN, ROBERT_GOB \
 ROBERT_GOB_PLUS, ELECTRA, ELECTRA_SMALL")
@@ -285,7 +287,11 @@ def flat_accuracy(preds, labels):
 #Por último definimos la función que se encargará de entrenar
 # el modelo y también de entregar los resultados en el set de validación.
 
+eval_losses=[]
+eval_accu=[]
+eval_f1=[]
 # function to train the model
+
 def training(n_epochs, training_dataloader,
              validation_dataloader, labels_tag):
     # ========================================
@@ -343,11 +349,15 @@ def training(n_epochs, training_dataloader,
         # Calculate the average loss over the training data.
         avg_train_loss = total_loss / len(train_dataloader)
 
+
+
         print("")
         print("  Average training loss: {0:.2f}".
               format(avg_train_loss))
         print("  Training epoch took: {:}".format(
             format_time(time.time() - t0)))
+
+        eval_losses.append(avg_train_loss)
 
         # ========================================
         #               Validation
@@ -407,12 +417,16 @@ def training(n_epochs, training_dataloader,
 
         # Report the final accuracy for this validation run.
         f1 = metrics.f1_score(all_labels, all_logits, labels=list(labels_tag), average='macro')
+
         print("  Accuracy: {0:.2f}".
               format(eval_accuracy / (step + 1)))
         print("  F1-Macro: {0:.2f}".
               format(f1 / (step + 1)))
         print("  Validation took: {:}".format(
             format_time(time.time() - t0)))
+
+        eval_accu.append(eval_accuracy / (step + 1))
+        eval_f1.append(f1 / (step + 1))
 
 
     # print the confusion matrix"
@@ -460,5 +474,22 @@ file = open(modelToSaveIn + os.path.sep + 'classIndexAssociation.pkl', 'rb')
 new_model = pickle.load(file)
 
 print('Weights after pickling', new_model)
+
+
+#plot accuracy,f1 and loss training processing data
+#
+#  Bibliografy:
+#
+#  https://androidkt.com/calculate-total-loss-and-accuracy-at-every-epoch-and-plot-using-matplotlib-in-pytorch/
+#
+plt.plot(eval_accu,'-o')
+plt.plot(eval_f1,'-o')
+plt.plot(eval_losses,'-o')
+plt.xlabel('epoch')
+plt.ylabel('accuracy')
+plt.legend(['Accur','F1','Loss'])
+plt.title('Accur, F1 and Loss in epoch trainig')
+
+plt.show()
 
 
