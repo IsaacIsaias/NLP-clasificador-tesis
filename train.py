@@ -67,16 +67,16 @@ device = torch.device(run_on)
 # Load the dataset into a pandas dataframe.
 #df = pd.read_csv('/reviewsclean.csv', header=0)
 DIRECTORY_ADDRES = 'datasets'
-#FILE_NAME = 'dataset_tesis.csv'
-FILE_NAME = 'expreprocessed_data_pipe.csv'
+FILE_NAME = 'dataset_tesis.csv'
+#FILE_NAME = 'expreprocessed_data_pipe.csv'
 #FILE_NAME = 'dataset_tesis.csv'
 columns_name = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'carrera']
 
 if args.typedata != False :
     columns_name = ['texto','titulo','carrera']
     FILE_NAME = 'dataset_tesis_procesado.csv'
-
-df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =columns_name , delimiter="|", header=None,skiprows = 1)
+#encoding='ISO-8859-1'
+df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =columns_name , encoding='UTF-8', sep='|', engine='python', header=None,skiprows = 1)
 
 train_option = ['titulo','texto','both','both-rev']
 train_field = args.train_field
