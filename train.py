@@ -1,20 +1,31 @@
-import sys,os,argparse,time
-from huggingface_hub import notebook_login
-import transformers
+import torch
+from transformers import  BertTokenizer
+from torch.utils.data import TensorDataset
+from torch.utils.data import DataLoader, SequentialSampler
+from transformers import BertForSequenceClassification, AutoConfig, AutoModelForSequenceClassification, AdamW
+from transformers import get_linear_schedule_with_warmup
+from transformers import AutoTokenizer
 from datasets import load_dataset, load_metric, Features, Value, ClassLabel,  Dataset
-import datasets
-import random
+from sklearn.model_selection import train_test_split
+import torch.optim
+import numpy as np
 import pandas as pd
-from sklearn.utils import shuffle
+import sys,os,argparse,time
+import time
+import datetime
+import random
+from sklearn.metrics import confusion_matrix
+from sklearn import metrics
+import pickle
+from transformers import TextClassificationPipeline
 
-from IPython.display import display, HTML
-
-from transformers import AutoModelForSequenceClassification, TrainingArguments, Trainer
-
-
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--bert_model", default='bert-base-uncased', type=str, help="Name of spanish bert model: BETO.")
+parser.add_argument("--bert_model", default='BETO', type=str, help="Name of spanish bert model: BETO, ROBERTA_E, BERTIN, ROBERT_GOB \
+ROBERT_GOB_PLUS, ELECTRA, ELECTRA_SMALL")
+
+parser.add_argument("--train_field", default='titulo', type=str, help=" titulo, texto,  both, both-rev i.e., Name of UNAM thesis field to tuning the huggingface Spanish model")
 parser.add_argument("--train_batch_size",
                         default=32,
                         type=int,
@@ -24,358 +35,461 @@ parser.add_argument("--eval_batch_size",
                     type=int,
                     help="Total batch size for eval.")
 parser.add_argument("--num_train_epochs",
-                    default=6,
+                    default=3,
                     type=int,
                     help="Total number of training epochs to perform.")
 
+parser.add_argument("--scope",
+                    default="cpu",
+                    type=str,
+                    help="Scope of training gpu or cpu")
 
-args = parser
+parser.add_argument("--exprm",
+                    default="",
+                    type=str,
+                    help="Name for module finetuning creation e.g, BETO-both: Pretrained BETO model with Unam tesis texto and title concat")
+parser.add_argument('--typedata', action='store_true', help='Indicate wich dataset use i.e., dataset_tesis.csv (by default) or dataset_tesis_procesado.csv')
+args  = parser.parse_args()
+
+# Select cpu or cuda
+run_on = args.scope
+if run_on == None or run_on == "" or (run_on != "gpu" and run_on != "cpu") :
+    run_on = 'cpu'
+device = torch.device(run_on)
+
+#Bibliografy
+#
+# https://benjad.github.io/2020/08/04/clasificador-sentimiento-BERT/
+#
+#
 
 
+# Load the dataset into a pandas dataframe.
+#df = pd.read_csv('/reviewsclean.csv', header=0)
 DIRECTORY_ADDRES = 'datasets'
-FILE_NAME = '_information.csv'
+FILE_NAME = 'dataset_tesis.csv'
+#FILE_NAME = 'expreprocessed_data_pipe.csv'
+#FILE_NAME = 'dataset_tesis.csv'
+columns_name = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'carrera']
 
-df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, delimiter=";", names = ['autor','titulo','año','carrera'], header=None)
+if args.typedata != False :
+    columns_name = ['texto','titulo','carrera']
+    FILE_NAME = 'dataset_tesis_procesado.csv'
+#encoding='ISO-8859-1'
+df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =columns_name , encoding='UTF-8', sep='|', engine='python', header=None,skiprows = 1)
 
-for index, row in df.iterrows():
-   if index > 0:
-     print(row['autor'], row['titulo'],row['año'],row['carrera'])
+train_option = ['titulo','texto','both','both-rev']
+train_field = args.train_field
+if train_field == "" or train_field == None or ( not train_field in train_option):
+    print("WARRRING BAT MODEL NAME INICIALIZATION SET BETO as DEFAULT")
+    train_option =train_option[0]
 
-###Transform in dataset data strctured
-#Shuffle elements
-
-#Bibliografy:
-#
-# https://www.geeksforgeeks.org/pandas-how-to-shuffle-a-dataframe-rows/
-#
-# Shuffle the DataFrame rows
-df = df.sample(frac = 1)
-string_text = str(df['carrera'].values)
-print (set(df['carrera'].to_list()))
-
-classSetOfTesisClasiication = set(df['carrera'].to_list())
-sizeOfClassClassification = len (classSetOfTesisClasiication)
-class_names = list(classSetOfTesisClasiication)
-
-
-#dataset_from_pandas.cast_column("carrera", ClassLabel(num_classes=sizeOfClassClassification, names=class_names, names_file=None, id=None))
-
-#Size of rows
-
-#Bibliografy:
-#  https://huggingface.co/docs/datasets/v1.11.0/loading_datasets.html
-#  https://huggingface.co/docs/datasets/loading
-#  https://towardsdatascience.com/my-experience-with-uploading-a-dataset-on-huggingfaces-dataset-hub-803051942c2d
-#
-#
-class_names=["Enseñanza de Inglés","Español","Historia"]
-emotion_features = Features({'titulo': Value('string'), 'carrera': ClassLabel(names=class_names)})
-#column_names=['texts','labels'],
-#, features=emotion_features
-#dataset_from_pandas = Dataset.from_pandas(df,features=emotion_features )
-#dataset = load_dataset('csv', delimiter=";", data_files=DIRECTORY_ADDRES + os.path.sep + FILE_NAME, column_names=['titulo', 'carrera'])
-
-import ast
-# load the dataset and copy the features
-# def process(ex):
-#     ex['carrera']: emotion_features['carrera'].names.index(ex['carrera'])
-#     return ex
-# dataset = dataset.map(process)
-# dataset.features = emotion_features
-
-
-dataset_size = df.shape[0]
-trainIndex = int (dataset_size*0.8)
-test_index = dataset_size - trainIndex
-validIndex = trainIndex+1
-testSplitSize = dataset_size*0.1
-validIndexTuple = (validIndex, (validIndex + int(testSplitSize)))
-testIndex = validIndex +  int(testSplitSize)  + 1
-testIndexTuple = (testIndex, (testIndex + int(testSplitSize)))
-#
-# Bibliografy
-# https://www.geeksforgeeks.org/split-pandas-dataframe-by-rows/
-#
-train_df = df.iloc[:trainIndex,:]
-valid_df = df.iloc[validIndexTuple[0]:validIndexTuple[1],:]
-test_df  = df.iloc[testIndexTuple[0]:testIndexTuple[1],:]
-###Split in test, dev and train
-dataset = Dataset.from_pandas(df)
-print(transformers.__version__)
-
-def process(ex):
-    ex['carrera']: emotion_features['carrera'].names.index(ex['carrera'])
-    return ex
-dataset = dataset.map(process)
-dataset = dataset.train_test_split(test_size=0.1)
-
-print (dataset["train"][0])
-
-notebook_login()
-
-GLUE_TASKS = ["cola", "mnli", "mnli-mm", "mrpc", "qnli", "qqp", "rte", "sst2", "stsb", "wnli"]
-
-task = "cola"
-model_checkpoint = "distilbert-base-uncased"
-batch_size = 16
-
-actual_task = "mnli" if task == "mnli-mm" else task
-dataset = load_dataset("glue", actual_task)
-metric = load_metric('glue', actual_task)
-
-dataset
-
-dataset["train"][0]
-
-
-def show_random_elements(dataset, num_examples=10):
-    assert num_examples <= len(dataset), "Can't pick more elements than there are in the dataset."
-    picks = []
-    for _ in range(num_examples):
-        pick = random.randint(0, len(dataset) - 1)
-        while pick in picks:
-            pick = random.randint(0, len(dataset) - 1)
-        picks.append(pick)
-
-    df = pd.DataFrame(dataset[picks])
-    for column, typ in dataset.features.items():
-        if isinstance(typ, datasets.ClassLabel):
-            df[column] = df[column].transform(lambda i: typ.names[i])
-    display(HTML(df.to_html()))
-
-show_random_elements(dataset["train"])
-
-metric
-
-import numpy as np
-
-#ou can call its compute method with your predictions
-# and labels directly and it will return a dictionary with the metric(s) value:
-
-fake_preds = np.random.randint(0, 2, size=(64,))
-fake_labels = np.random.randint(0, 2, size=(64,))
-metric.compute(predictions=fake_preds, references=fake_labels)
-
-#PREPROCESSING DATA
-
-# Before we can feed those texts to our model, we need to preprocess them. This is done by a 🤗 Transformers Tokenizer which will (as the name indicates) tokenize the inputs (including converting the tokens to their corresponding IDs in the pretrained vocabulary) and put it in a format the model expects, as well as generate the other inputs that model requires.
-#
-# To do all of this, we instantiate our tokenizer with the AutoTokenizer.from_pretrained method, which will ensure:
-#
-#     we get a tokenizer that corresponds to the model architecture we want to use,
-#     we download the vocabulary used when pretraining this specific checkpoint.
-#
-# That vocabulary will be cached, so it's not downloaded again the next time we run the cell.
-
-from transformers import AutoTokenizer
-
-tokenizer = AutoTokenizer.from_pretrained(model_checkpoint, use_fast=True)
-
-tokenizer("Hello, this one sentence!", "And this sentence goes with it.")
-
-# Depending on the model you selected, you will see different keys in the dictionary returned by
-# the cell above. They don't matter much for what we're doing here (just know they are required by
-# the model we will instantiate later), you can learn more about them in this tutorial
-# if you're interested.
-#
-# To preprocess our dataset, we will thus need the names of the columns containing the sentence(s).
-# The following dictionary keeps track of the correspondence task to column names:
-
-
-task_to_keys = {
-    "cola": ("sentence", None),
-    "mnli": ("premise", "hypothesis"),
-    "mnli-mm": ("premise", "hypothesis"),
-    "mrpc": ("sentence1", "sentence2"),
-    "qnli": ("question", "sentence"),
-    "qqp": ("question1", "question2"),
-    "rte": ("sentence1", "sentence2"),
-    "sst2": ("sentence", None),
-    "stsb": ("sentence1", "sentence2"),
-    "wnli": ("sentence1", "sentence2"),
-}
-
-
-sentence1_key, sentence2_key = task_to_keys[task]
-if sentence2_key is None:
-    print(f"Sentence: {dataset['train'][0][sentence1_key]}")
+if train_field == "both":
+    reviews = df["texto"].astype(str) + " " + df["titulo"]
+elif train_field == "both-rev":
+    reviews = df["titulo"].astype(str) + df["texto"]
 else:
-    print(f"Sentence 1: {dataset['train'][0][sentence1_key]}")
-    print(f"Sentence 2: {dataset['train'][0][sentence2_key]}")
-
-# We can them write the function that will preprocess our samples.
-# We just feed them to the tokenizer with the argument truncation=True.
-# This will ensure that an input longer that what the model selected can handle
-# will be truncated to the maximum length accepted by the model.
-
-def preprocess_function(examples):
-    if sentence2_key is None:
-        return tokenizer(examples[sentence1_key], truncation=True)
-    return tokenizer(examples[sentence1_key], examples[sentence2_key], truncation=True)
+  reviews = df[train_field]
 
 
-# This function works with one or several examples.
-# In the case of several examples, the tokenizer will return a list of lists for each key:
+#Class filed in datasets
+sentiment = df['carrera']
 
-preprocess_function(dataset['train'][:5])
+class_names = list(set(sentiment))
+sizeOfClass = len(set(class_names))
+emotion_features = Features({'texto': Value('string'), 'carrera': ClassLabel(names=class_names)})
+classIndex = [ emotion_features['carrera'].names.index(x) for x in emotion_features['carrera'].names]
 
-# To apply this function on all the sentences (or pairs of sentences) in our dataset,
-# we just use the map method of our dataset object we created earlier.
-# This will apply the function on all the elements of all the splits in dataset, so our training,
-# validation and testing data will be preprocessed in one single command.
+idIndexClassTuple = dict(zip(classIndex,class_names))
+classNameIndexTuple =  dict(zip(class_names,classIndex))
 
-encoded_dataset = dataset.map(preprocess_function, batched=True)
-
-# Even better, the results are automatically cached by the 🤗 Datasets library to avoid
-# spending time on this step the next time you run your notebook.
-# The 🤗 Datasets library is normally smart enough to detect when the function
-# you pass to map has changed (and thus requires to not use the cache data).
-# For instance, it will properly detect if you change the task in the
-# first cell and rerun the notebook. 🤗 Datasets warns you when it
-# uses cached files, you can pass load_from_cache_file=False in the call
-# to map to not use the cached files and force the preprocessing to be applied again.
-
-# Note that we passed batched=True to encode the texts by batches together.
-# This is to leverage the full benefit of the fast tokenizer we loaded earlier,
-# which will use multi-threading to treat the texts in a batch concurrently.
-
-
-#Fine-tuning the model
-
-# Now that our data is ready, we can download the pretrained model and fine-tune it.
-# Since all our tasks are about sentence classification, we use the AutoModelForSequenceClassification
-# class. Like with the tokenizer, the from_pretrained method will download and cache the model for us.
-# The only thing we have to specify is the number of labels for our problem
-# (which is always 2, except for STS-B which is a regression problem and MNLI where we have 3 labels):
-
-num_labels = 3 if task.startswith("mnli") else 1 if task=="stsb" else 2
-model = AutoModelForSequenceClassification.from_pretrained(model_checkpoint, num_labels=num_labels)
-
-# The warning is telling us we are throwing away some weights (the vocab_transform and vocab_layer_norm
-# layers) and randomly initializing some other (the pre_classifier and classifier layers).
-# This is absolutely normal in this case, because we are removing the head used to pretrain the
-# model on a masked language modeling objective and replacing it with a new head for which
-# we don't have pretrained weights, so the library warns us we should fine-tune this model ' \
-# 'before using it for inference, which is exactly what we are going to do.
-#
-# To instantiate a Trainer, we will need to define two more things. The most important is the
-# TrainingArguments, which is a class that contains all the attributes to customize the training.
-# It requires one folder name, which will be used to save the checkpoints of the model, and all
-# other arguments are optional:
-
-metric_name = "pearson" if task == "stsb" else "matthews_correlation" if task == "cola" else "accuracy"
-model_name = model_checkpoint.split("/")[-1]
-
-args = TrainingArguments(
-    f"{model_name}-finetuned-{task}",
-    evaluation_strategy = "epoch",
-    save_strategy = "epoch",
-    learning_rate=2e-5,
-    per_device_train_batch_size=batch_size,
-    per_device_eval_batch_size=batch_size,
-    num_train_epochs=5,
-    weight_decay=0.01,
-    load_best_model_at_end=True,
-    metric_for_best_model=metric_name,
-    push_to_hub=True,
-)
-
-
-# Here we set the evaluation to be done at the end of each epoch, tweak the learning rate, use
-# the batch_size defined at the top of the notebook and customize the number of epochs for
-# training, as well as the weight decay. Since the best model might not be the one at the end of
-# training, we ask the Trainer to load the best model it saved (according to metric_name) at the
-# end of training.
-#
-# The last argument to setup everything so we can push the model to the Hub regularly during training.
-# Remove it if you didn't follow the installation steps at the top of the notebook. If you want to
-# save your model locally in a name that is different than the name of the repository it will be pushed,
-# or if you want to push your model under an organization and not your name space, use the hub_model_id argument
-# to set the repo name (it needs to be the full name, including your namespace: for instance "sgugger/bert-finetuned-mrpc" or "huggingface/bert-finetuned-mrpc").
-#
-# The last thing to define for our Trainer is how to compute the metrics from the predictions.
-# We need to define a function for this, which will just use the metric we loaded earlier, the only
-# preprocessing we have to do is to take the argmax of our predicted logits (our just squeeze the last
-# axis in the case of STS-B):
-
-def compute_metrics(eval_pred):
-    predictions, labels = eval_pred
-    if task != "stsb":
-        predictions = np.argmax(predictions, axis=1)
-    else:
-        predictions = predictions[:, 0]
-    return metric.compute(predictions=predictions, references=labels)
-
-#Then we just need to pass all of this along with our datasets to the Trainer:
-
-validation_key = "validation_mismatched" if task == "mnli-mm" else "validation_matched" if task == "mnli" else "validation"
-trainer = Trainer(
-    model,
-    args,
-    train_dataset=encoded_dataset["train"],
-    eval_dataset=encoded_dataset[validation_key],
-    tokenizer=tokenizer,
-    compute_metrics=compute_metrics
-)
-
-# You might wonder why we pass along the tokenizer when we already preprocessed our data.
-# This is because we will use it once last time to make all the samples we gather the same
-# length by applying padding, which requires knowing the model's '
-# preferences regarding padding (to the left or right? with which token?).
-# The tokenizer has a pad method that will do all of this right for us, and the Trainer will use it.
-# You can customize this part by defining and passing your own data_collator which will receive the
-# samples like the dictionaries seen above and will need to return a dictionary of tensors.
-
-
-trainer.train()
-
-# We can check with the evaluate method that our
-# Trainer did reload the best model properly (if it was not the last one):
-
-trainer.evaluate()
-
-# To see how your model fared you can compare it to the GLUE Benchmark leaderboard.
-#
-# You can now upload the result of the training to the Hub, just execute this instruction:
-
-trainer.push_to_hub()
-
-# You can now share this model with all your friends, family, favorite pets: they can all load it with
-# the identifier "your-username/the-name-you-picked" so for instance:
-
-from transformers import AutoModelForSequenceClassification
-
-model = AutoModelForSequenceClassification.from_pretrained("sgugger/my-awesome-model")
+sentiment = sentiment.replace(class_names,classIndex)
 
 
 
-#We can now finetune our model by just calling the train method:
+# Split dataset
+X_train, X_val, y_train, y_val = train_test_split(reviews,
+sentiment, stratify=sentiment, test_size=0.2, random_state=42)
+
+# Report datasets lenghts
+print('Training set length : {}'.format(len(X_train)))
+print('Validation set length : {}'.format(len(X_val)))
+
+spanish_models = {'BETO':"hiiamsid/BETO_es_binary_classification",
+                  'ROBERTA_E':"bertin-project/bertin-roberta-base-spanish",
+                  'BERTIN': "bertin-project/bertin-base-xnli-es",
+                  'ROBERT_GOB':"PlanTL-GOB-ES/roberta-large-bne",
+                  'ROBERT_GOB_PLUS':"PlanTL-GOB-ES/roberta-base-bne",
+                  'ELECTRA':"mrm8488/electricidad-base-discriminator",
+                  'ELECTRA_SMALL':"flax-community/spanish-t5-small"
+                  }
+
+
+#Tokenization
+
+# tokenizer = BertTokenizer.from_pretrained("pytorch/",
+#             do_lower_case=True)
+
+model_name = args.bert_model
+
+if model_name == None or model_name == "" or not model_name in spanish_models :
+    print("WARRRING BAT MODEL NAME INICIALIZATION SET BETO as DEFAULT")
+    model_name = 'BETO'
+
+tokenizer = AutoTokenizer.from_pretrained(spanish_models[model_name] ,use_fast=False)
+
+def preprocessing(dataset):
+    input_ids = []
+    attention_mask = []
+    for doc in dataset:
+        encoded_doc = tokenizer.encode_plus(doc,
+                   add_special_tokens=True, max_length=115,
+                   truncation=True,pad_to_max_length=True)
+        input_ids.append(encoded_doc['input_ids'])
+        attention_mask.append(encoded_doc['attention_mask'])
+    return (torch.tensor(input_ids),
+           torch.tensor(attention_mask))
+
+def preprocessingtext(_text, tokenizer):
+     if _text == "" or _text == None or tokenizer == None:
+         raise Exception("Not  text or error")
+     else:
+         encoded_doc = tokenizer.encode_plus(_text,
+                                             add_special_tokens=True, max_length=115,
+                                             truncation=True, pad_to_max_length=True)
+         return (torch.tensor(encoded_doc['input_ids']),
+             torch.tensor(encoded_doc['attention_mask']))
 
 
 
+# Apply preprocessing to dataset
+X_train_inputs, X_train_masks = preprocessing(X_train)
+X_val_inputs, X_val_masks = preprocessing(X_val)
+
+# Report max n° tokens in a sentence
+max_len = max([torch.sum(sen) for sen in X_train_masks])
+print('Max n°tokens in a sentence: {0}'.format(max_len))
+
+#Luego creamos los dataloaders de PyTorch para el dataset de entrenamiento y de validación.
+
+# Data loaders
+
+batch_size = args.train_batch_size
+if batch_size <= 0 or batch_size == None:
+    print("WARRRING BAT BATCH SIZE INICIALIZATION SET BETO as DEFAULT")
+    batch_size = 32
+
+y_train_labels = torch.tensor(y_train.values)
+y_val_labels = torch.tensor(y_val.values)
+
+#Set experiment name
+experimentName = ""
+if args.exprm != None and args.exprm != "":
+    experimentName = args.exprm
+
+
+def dataloader(x_inputs, x_masks, y_labels):
+    data = TensorDataset(x_inputs, x_masks, y_labels)
+    sampler = SequentialSampler(data)
+    dataloader = DataLoader(data, sampler=sampler,
+                 batch_size=batch_size,
+                 num_workers=0)
+    return dataloader
+
+train_dataloader = dataloader(X_train_inputs, X_train_masks,
+                   y_train_labels)
+val_dataloader = dataloader(X_val_inputs, X_val_masks,
+                 y_val_labels)
+
+
+# Ahora establecemos los valores aleatorios, de manera de que nuestros resultados sean reproducibles.
+# También cargamos el modelo, el optimizador, definimos los epochs y el scheduler en PyTorch.
+
+# set random seed
+def set_seed(value):
+    random.seed(value)
+    np.random.seed(value)
+    torch.manual_seed(value)
+    torch.cuda.manual_seed_all(value)
+set_seed(42)
+
+# Create model and optimizer
+#model = AutoModelForSequenceClassification.from_pretrained(spanish_models['BETO'])
+
+
+#Fix model class rearrange problem
 #Bibliografy:
-# Pipelines for inference
-#https://huggingface.co/docs/transformers/pipeline_tutorial
+#
+#  https://discuss.huggingface.co/t/how-do-i-change-the-classification-head-of-a-model/4720/21
+#
 
-# Fine-tune a pretrained model
-#https://huggingface.co/docs/transformers/training
+config = AutoConfig.from_pretrained(spanish_models[model_name])
+config.num_labels = sizeOfClass
+config.output_hidden_states=False
+model = AutoModelForSequenceClassification.from_config(config)
 
-# Preprocess
-# Uff durisimo
+# model = AutoModelForSequenceClassification.from_pretrained(
+#         , num_labels=sizeOfClass, output_attentions=False,
+#          output_hidden_states=False)
 
-#https://huggingface.co/docs/transformers/preprocessing
-
-#Text classification
-#https://huggingface.co/docs/transformers/tasks/sequence_classification
-
-# How to fine-tune a model for common downstream tasks
-#https://huggingface.co/docs/transformers/custom_datasets
-
-#Create a Dataset
-#https://huggingface.co/docs/datasets/about_dataset_load
-#https://huggingface.co/docs/datasets/dataset_script
+#Replace for avoiding error in last final class number
+#Bibliografy:
+#
+#  https://discuss.huggingface.co/t/replacing-last-layer-of-a-fine-tuned-model-to-use-different-set-of-labels/12995/5
+#
 
 
-#Paperspace HPC
-#https://www.youtube.com/watch?v=bZ2bY5w7s10
+
+model.config.id2label = idIndexClassTuple
+model.config.label2id = classNameIndexTuple
+model.config._num_labels = sizeOfClass ## replacing 9 by 13
+model.config.num_labels = sizeOfClass
+
+
+optimizer = AdamW(model.parameters(),
+                  lr = 4e-5,
+                  eps = 1e-6
+                  )
+
+if run_on == 'cuda':
+    model.cuda()
+
+# Define number of epochs
+
+epochs = args.num_train_epochs
+if epochs <= 0:
+    print("WARRRING BAT BATCH SIZE INICIALIZATION SET BETO as DEFAULT")
+    batch_size = 32
+
+total_steps = len(train_dataloader) * epochs
+
+
+##### STUDY THAT #######
+# Create the learning rate scheduler.
+scheduler = get_linear_schedule_with_warmup(optimizer,
+            num_warmup_steps = 0,
+            num_training_steps = total_steps)
+
+
+##Definimos una función para formatear el tiempo y otra para calcular la exactitud.
+
+#fuction to format time
+def format_time(elapsed):
+    elapsed_rounded = int(round((elapsed)))
+    return str(datetime.timedelta(seconds=elapsed_rounded))
+
+#function to compute accuracy
+def flat_accuracy(preds, labels):
+    pred_flat = np.argmax(preds, axis=1).flatten()
+    labels_flat = labels.flatten()
+    return np.sum(pred_flat == labels_flat) / len(labels_flat)
+
+#Por último definimos la función que se encargará de entrenar
+# el modelo y también de entregar los resultados en el set de validación.
+
+eval_losses=[]
+eval_accu=[]
+eval_f1=[]
+# function to train the model
+
+def training(n_epochs, training_dataloader,
+             validation_dataloader, labels_tag):
+    # ========================================
+    #               Training
+    # ========================================
+    print('======= Training =======')
+    for epoch_i in range(0, n_epochs):
+        # Perform one full pass over the training set
+        print("")
+        print('======= Epoch {:} / {:} ======='.format(
+            epoch_i + 1, epochs))
+        # Measure how long the training epoch takes.
+        t0 = time.time()
+        # Reset the total loss for this epoch.
+        total_loss = 0
+        # Put the model into training mode.
+        model.train()
+        # For each batch of training data
+        for step, batch in enumerate(training_dataloader):
+            batch_loss = 0
+            # Unpack this training batch from dataloader
+            #   [0]: input ids, [1]: attention masks,
+            #   [2]: labels
+            b_input_ids, b_input_mask, b_labels = tuple(
+                t.to(device) for t in batch)
+
+            # Clear any previously calculated gradients
+            model.zero_grad()
+
+            # Perform a forward pass
+            outputs = model(b_input_ids,
+                            token_type_ids=None,
+                            attention_mask=b_input_mask,
+                            labels=b_labels)
+
+            # pull loss value out of the output tuple
+            loss = outputs[0]
+            batch_loss += loss.item()
+            total_loss += loss.item()
+
+            # Perform a backward pass
+            loss.backward()
+
+            # Clip the norm of the gradients to 1.0.
+            torch.nn.utils.clip_grad_norm_(model.parameters(),
+                                           1.0)
+
+            # Update parameters
+            # ¿take a step using the computed gradient
+            optimizer.step()
+            scheduler.step()
+
+            print('batch loss: {0} | avg loss: {1}'.format(
+                batch_loss, total_loss / (step + 1)))
+        # Calculate the average loss over the training data.
+        avg_train_loss = total_loss / len(train_dataloader)
+
+
+
+        print("")
+        print("  Average training loss: {0:.2f}".
+              format(avg_train_loss))
+        print("  Training epoch took: {:}".format(
+            format_time(time.time() - t0)))
+
+        eval_losses.append(avg_train_loss)
+
+        # ========================================
+        #               Validation
+        # ========================================
+        # After the completion of each training epoch,
+        # measure accuracy on the validation set.
+
+        print("")
+        print("======= Validation =======")
+
+        t0 = time.time()
+
+        # Put the model in evaluation mode
+        model.eval()
+
+        # Tracking variables
+        eval_loss, eval_accuracy = 0, 0
+        all_logits = []
+        all_labels = []
+        # Evaluate data for one epoch
+        for step, batch in enumerate(validation_dataloader):
+            # Add batch to device
+            # Unpack this training batch from our dataloader.
+            #   [0]: input ids, [1]: attention masks,
+            #   [2]: labels
+            b_input_ids, b_input_mask, b_labels = tuple(
+                t.to(device) for t in batch)
+
+            # Model will not to compute gradients
+            with torch.no_grad():
+                # Forward pass
+                # This will return the logits
+                outputs = model(b_input_ids,
+                                token_type_ids=None,
+                                attention_mask=b_input_mask)
+
+            # The "logits" are the output values
+            # prior to applying an activation function
+            logits = outputs[0]
+
+            # Move logits and labels to CPU
+            logits = logits.detach().cpu().numpy()
+            b_labels = b_labels.to('cpu').numpy()
+
+            # Save batch logits and labels
+            # We will use thoses in the confusion matrix
+            predict_labels = np.argmax(
+                logits, axis=1).flatten()
+            all_logits.extend(predict_labels.tolist())
+            all_labels.extend(b_labels.tolist())
+
+            # Calculate the accuracy for this batch
+            tmp_eval_accuracy = flat_accuracy(
+                logits, b_labels)
+            # Accumulate the total accuracy.
+            eval_accuracy += tmp_eval_accuracy
+
+        # Report the final accuracy for this validation run.
+        f1 = metrics.f1_score(all_labels, all_logits, labels=list(labels_tag), average='macro')
+
+        print("  Accuracy: {0:.2f}".
+              format(eval_accuracy / (step + 1)))
+        print("  F1-Macro: {0:.2f}".
+              format(f1 / (step + 1)))
+        print("  Validation took: {:}".format(
+            format_time(time.time() - t0)))
+
+        eval_accu.append(eval_accuracy / (step + 1))
+        eval_f1.append(f1 / (step + 1))
+
+
+    # print the confusion matrix"
+    conf = confusion_matrix(
+        all_labels, all_logits, normalize='true')
+    print(conf)
+    print("")
+    print("Training complete")
+
+
+# call function to train the model
+training(epochs, train_dataloader, val_dataloader, labels_tag=idIndexClassTuple.keys())
+
+#Save the Model
+path = os.path.join("./finetunigmodel", spanish_models[model_name] + experimentName)
+if not os.path.exists(path):
+     # Handle the errors
+    try:
+        # Create the directory in the path
+        os.makedirs(path, exist_ok=True)
+        print("Directory %s Created Successfully" % spanish_models[model_name])
+    except OSError as error:
+        print("Directory %s Creation Failed" % spanish_models[model_name])
+
+modelToSaveIn = path
+
+model.save_pretrained(modelToSaveIn)
+###Save in File the Correspondence between
+## Number and Class to load in clasification processs
+## with system
+
+
+print('Weights before pickling')
+
+# Open a file to write bytes
+p_file = open(modelToSaveIn + os.path.sep + 'classIndexAssociation.pkl', 'wb')
+
+# Pickle the object
+pickle.dump(idIndexClassTuple, p_file)
+p_file.close()
+
+
+# Deserialization of the file
+file = open(modelToSaveIn + os.path.sep + 'classIndexAssociation.pkl', 'rb')
+new_model = pickle.load(file)
+
+print('Weights after pickling', new_model)
+
+
+#plot accuracy,f1 and loss training processing data
+#
+#  Bibliografy:
+#
+#  https://androidkt.com/calculate-total-loss-and-accuracy-at-every-epoch-and-plot-using-matplotlib-in-pytorch/
+#
+plt.plot(eval_accu,'-o')
+plt.plot(eval_f1,'-o')
+plt.plot(eval_losses,'-o')
+plt.xlabel('epoch')
+plt.ylabel('accuracy')
+plt.legend(['Accur','F1','Loss'])
+plt.title('Accur, F1 and Loss in epoch trainig')
+
+plt.show()
+
 
