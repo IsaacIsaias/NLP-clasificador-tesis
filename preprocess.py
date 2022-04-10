@@ -43,6 +43,16 @@ def load_dataset_csv():
     return dataframe
 
 
+def load_dataset_csv_procesado():
+    dataframe = pd.read_csv('./datasets/dataset_tesis_procesado.csv', encoding='ISO-8859-15', sep='|', engine='python')
+    print(dataframe.head())
+    dataframe.columns = ['texto', 'titulo', 'carrera']
+    print(dataframe.head())
+    df = dataframe.groupby(["carrera"])["texto"].count()
+    print(df)
+    return dataframe
+
+
 def preprocess(text):
     # text = "A las 8 en punto de la mañana ... Arthur no se sentía bien. 21 18-5-2022 yisel@gmail.com"
     text = text.lower()  # convertir a minúsculas
@@ -153,8 +163,37 @@ def split_dataset():
     #     file.write(str(x_test[j]) + '|' + str(y_test[j]) + '\n')
     # file.close()
 
+
+def split_dataset_procesado():
+    df = load_dataset_csv_procesado()
+    x = df.loc[:, df.columns != 'carrera']
+    y = df.loc[:, 'carrera']
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=0, shuffle=True, stratify=y)
+    print(x_train.shape)
+    print(x_test.shape)
+    print(y_train.shape)
+    print(y_test.shape)
+
+    train = pd.DataFrame()
+    #train.columns = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'carrera']
+    train['texto'] = x_train ['texto']
+    train['titulo'] = x_train['titulo']
+    train['carrera'] = y_train
+    print(train)
+    test = pd.DataFrame()
+    # train.columns = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'carrera']
+    test['texto'] = x_test['texto']
+    test['titulo'] = x_test['titulo']
+    test['carrera'] = y_test
+    print(test)
+
+    train.to_csv('datasets/dataset_tesis_procesado_train.csv', sep='|')
+    test.to_csv('datasets/dataset_tesis_procesado_test.csv', sep='|')
+
+
 process_all_dataset()
-# split_dataset()
+split_dataset()
+split_dataset_procesado()
 #load_dataset_csv()
 # from datasets import load_dataset
 # dataset = load_dataset("hackathon-pln-es/unam_tesis", split='train')
