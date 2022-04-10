@@ -34,8 +34,8 @@ def load_dataset_hf(name_dataset):
 
 # cargar dataset en formato csv
 def load_dataset_csv():
-    dataframe = pd.DataFrame()
     dataframe = pd.read_csv('./datasets/dataset_tesis.csv', encoding='utf-8', sep='|', engine='python')
+    print(dataframe.head())
     dataframe.columns = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'carrera']
     print(dataframe.head())
     df = dataframe.groupby(["carrera"])["texto"].count()
@@ -53,10 +53,10 @@ def preprocess(text):
     # tokenizer = nltk.RegexpTokenizer(r"\w+") # elimina signos de puntuación, separa las fechas y los correos
     # tokenizer = nltk.RegexpTokenizer('\w+|\$[\d\.]+|\S+') # no elimina signos de puntuación, separa las fechas y los correos
     # tokens = tokenizer.tokenize(sentence)
-    print(tokens)
+    #print(tokens)
     # tokens = set(tokens)  # eliminar palabras repetidas pero no quedan en orden de aparición
     words = [word for word in tokens if word.isalnum()]  # elimina los string que no son alfanuméricos
-    print(words)
+    #print(words)
 
     # eliminar palabras vacías
     # print(stopwords.words('spanish')) #lista de palabras vacías
@@ -66,7 +66,7 @@ def preprocess(text):
     for w in words:
         if w not in stop_words:
             clean_words.append(w)
-    print(clean_words)
+    #print(clean_words)
 
     # stemming: eliminar plurales
     stemmer = SnowballStemmer("spanish")
@@ -103,8 +103,6 @@ def process_all_dataset():
     file.write('texto|titulo|carrera' + '\n')
     for k in range(len(textos_procesados)):
         for a in textos_procesados[k]:
-            print(a)
-            print(k)
             file.write(str(a) + ' ')
         file.write('|')
         for b in titulos_procesados[k]:
