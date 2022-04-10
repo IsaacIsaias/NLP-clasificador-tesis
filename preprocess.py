@@ -35,7 +35,7 @@ def load_dataset_hf(name_dataset):
 # cargar dataset en formato csv
 def load_dataset_csv():
     dataframe = pd.DataFrame()
-    dataframe = pd.read_csv('./datasets/dataset_tesis.csv', encoding='ISO-8859-1', sep='|', engine='python')
+    dataframe = pd.read_csv('./datasets/dataset_tesis.csv', encoding='utf-8', sep='|', engine='python')
     dataframe.columns = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'carrera']
     print(dataframe.head())
     df = dataframe.groupby(["carrera"])["texto"].count()
@@ -99,10 +99,12 @@ def process_all_dataset():
         print(titulo[j])
         titulos_procesados.append(preprocess(titulo[j]))
 
-    file = open('datasets/dataset_tesis_procesado.csv', 'w', encoding='utf-8')  # ISO-8859-1
+    file = open('datasets/dataset_tesis_procesado.csv', 'w', encoding='ISO-8859-15', errors='ignore')  # ISO-8859-1
     file.write('texto|titulo|carrera' + '\n')
     for k in range(len(textos_procesados)):
         for a in textos_procesados[k]:
+            print(a)
+            print(k)
             file.write(str(a) + ' ')
         file.write('|')
         for b in titulos_procesados[k]:
@@ -153,10 +155,9 @@ def split_dataset():
     #     file.write(str(x_test[j]) + '|' + str(y_test[j]) + '\n')
     # file.close()
 
-
-# process_all_dataset()
+process_all_dataset()
 # split_dataset()
-
-from datasets import load_dataset
-dataset = load_dataset("hackathon-pln-es/unam_tesis", split='train')
-print(dataset)
+#load_dataset_csv()
+# from datasets import load_dataset
+# dataset = load_dataset("hackathon-pln-es/unam_tesis", split='train')
+# print(dataset)
