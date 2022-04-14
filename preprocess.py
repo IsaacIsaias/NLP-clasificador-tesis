@@ -35,7 +35,6 @@ def load_dataset_hf(name_dataset):
 # cargar dataset en formato csv
 def load_dataset_csv():
     dataframe = pd.read_csv('./datasets/dataset_tesis.csv', encoding='utf-8', sep='|', engine='python')
-    print(dataframe.head())
     dataframe.columns = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'carrera']
     print(dataframe.head())
     df = dataframe.groupby(["carrera"])["texto"].count()
@@ -45,7 +44,6 @@ def load_dataset_csv():
 
 def load_dataset_csv_procesado():
     dataframe = pd.read_csv('./datasets/dataset_tesis_procesado.csv', encoding='ISO-8859-15', sep='|', engine='python')
-    print(dataframe.head())
     dataframe.columns = ['texto', 'titulo', 'carrera']
     print(dataframe.head())
     df = dataframe.groupby(["carrera"])["texto"].count()
