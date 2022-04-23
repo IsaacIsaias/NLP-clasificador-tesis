@@ -67,8 +67,8 @@ device = torch.device(run_on)
 # Load the dataset into a pandas dataframe.
 #df = pd.read_csv('/reviewsclean.csv', header=0)
 DIRECTORY_ADDRES = 'datasets'
-FILE_NAME = 'dataset_tesis.csv'
-#FILE_NAME = 'expreprocessed_data_pipe.csv'
+#FILE_NAME = 'dataset_tesis.csv'
+FILE_NAME = 'expreprocessed_data_pipe.csv'
 #FILE_NAME = 'dataset_tesis.csv'
 columns_name = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'carrera']
 
@@ -87,9 +87,49 @@ if train_field == "" or train_field == None or ( not train_field in train_option
 if train_field == "both":
     reviews = df["texto"].astype(str) + " " + df["titulo"]
 elif train_field == "both-rev":
-    reviews = df["titulo"].astype(str) + df["texto"]
+    reviews = df["titulo"].astype(str) + " " + df["texto"]
 else:
   reviews = df[train_field]
+
+df["process_texto"] = reviews
+
+####Split text because their size is more large than 200
+#
+# Bibliografy:
+#
+#   https://medium.com/@armandj.olivares/using-bert-for-classifying-documents-with-long-texts-5c3e7b04573d
+#
+#   Articles :
+#      Hierarchical Transformers for Long Document Classification
+#         - https://arxiv.org/abs/1910.10781
+#
+#     DocBERT: BERT for Document Classification
+#         - https://arxiv.org/abs/1904.08398
+#  WARNING!!!: Transform in a list of token list with 200 as max size
+#
+def get_split(text1):
+  l_total = []
+  l_parcial = []
+  if len(text1.split())//150 >0:
+    n = len(text1.split())//150
+  else:
+    n = 1
+  for w in range(n):
+    if w == 0:
+      l_parcial = text1.split()[:200]
+      l_total.append(" ".join(l_parcial))
+    else:
+      l_parcial = text1.split()[w*150:w*150 + 200]
+      l_total.append(" ".join(l_parcial))
+  return l_total
+
+df['text_split'] = df["process_texto"].apply(get_split)
+
+print (df.head())
+
+#Evaluate data in file
+
+#reviews = df['text_split']
 
 
 #Class filed in datasets
@@ -104,8 +144,6 @@ idIndexClassTuple = dict(zip(classIndex,class_names))
 classNameIndexTuple =  dict(zip(class_names,classIndex))
 
 sentiment = sentiment.replace(class_names,classIndex)
-
-
 
 # Split dataset
 X_train, X_val, y_train, y_val = train_test_split(reviews,
@@ -489,7 +527,7 @@ plt.xlabel('epoch')
 plt.ylabel('accuracy')
 plt.legend(['Accur','F1','Loss'])
 plt.title('Accur, F1 and Loss in epoch trainig')
-
+plt.savefig(   str(time.time()) + experimentName +'.png', bbox_inches='tight')
 plt.show()
 
 
