@@ -34,9 +34,17 @@ def load_dataset_hf(name_dataset):
 
 # cargar dataset en formato csv
 def load_dataset_csv():
-    dataframe = pd.DataFrame()
-    dataframe = pd.read_csv('./datasets/dataset_tesis.csv', encoding='ISO-8859-1', sep='|', engine='python')
+    dataframe = pd.read_csv('./datasets/dataset_tesis.csv', encoding='utf-8', sep='|', engine='python')
     dataframe.columns = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'carrera']
+    print(dataframe.head())
+    df = dataframe.groupby(["carrera"])["texto"].count()
+    print(df)
+    return dataframe
+
+
+def load_dataset_csv_procesado():
+    dataframe = pd.read_csv('./datasets/dataset_tesis_procesado.csv', encoding='ISO-8859-15', sep='|', engine='python')
+    dataframe.columns = ['texto', 'titulo', 'carrera']
     print(dataframe.head())
     df = dataframe.groupby(["carrera"])["texto"].count()
     print(df)
@@ -53,10 +61,10 @@ def preprocess(text):
     # tokenizer = nltk.RegexpTokenizer(r"\w+") # elimina signos de puntuación, separa las fechas y los correos
     # tokenizer = nltk.RegexpTokenizer('\w+|\$[\d\.]+|\S+') # no elimina signos de puntuación, separa las fechas y los correos
     # tokens = tokenizer.tokenize(sentence)
-    print(tokens)
+    #print(tokens)
     # tokens = set(tokens)  # eliminar palabras repetidas pero no quedan en orden de aparición
     words = [word for word in tokens if word.isalnum()]  # elimina los string que no son alfanuméricos
-    print(words)
+    #print(words)
 
     # eliminar palabras vacías
     # print(stopwords.words('spanish')) #lista de palabras vacías
@@ -66,7 +74,7 @@ def preprocess(text):
     for w in words:
         if w not in stop_words:
             clean_words.append(w)
-    print(clean_words)
+    #print(clean_words)
 
     # stemming: eliminar plurales
     stemmer = SnowballStemmer("spanish")
@@ -99,7 +107,7 @@ def process_all_dataset():
         print(titulo[j])
         titulos_procesados.append(preprocess(titulo[j]))
 
-    file = open('datasets/dataset_tesis_procesado.csv', 'w', encoding='utf-8')  # ISO-8859-1
+    file = open('datasets/dataset_tesis_procesado.csv', 'w', encoding='ISO-8859-15', errors='ignore')  # ISO-8859-1
     file.write('texto|titulo|carrera' + '\n')
     for k in range(len(textos_procesados)):
         for a in textos_procesados[k]:
@@ -154,9 +162,37 @@ def split_dataset():
     # file.close()
 
 
-# process_all_dataset()
-# split_dataset()
+def split_dataset_procesado():
+    df = load_dataset_csv_procesado()
+    x = df.loc[:, df.columns != 'carrera']
+    y = df.loc[:, 'carrera']
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=0, shuffle=True, stratify=y)
+    print(x_train.shape)
+    print(x_test.shape)
+    print(y_train.shape)
+    print(y_test.shape)
 
-from datasets import load_dataset
-dataset = load_dataset("hackathon-pln-es/unam_tesis", split='train')
-print(dataset)
+    train = pd.DataFrame()
+    #train.columns = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'carrera']
+    train['texto'] = x_train ['texto']
+    train['titulo'] = x_train['titulo']
+    train['carrera'] = y_train
+    print(train)
+    test = pd.DataFrame()
+    # train.columns = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'carrera']
+    test['texto'] = x_test['texto']
+    test['titulo'] = x_test['titulo']
+    test['carrera'] = y_test
+    print(test)
+
+    train.to_csv('datasets/dataset_tesis_procesado_train.csv', sep='|')
+    test.to_csv('datasets/dataset_tesis_procesado_test.csv', sep='|')
+
+
+process_all_dataset()
+split_dataset()
+split_dataset_procesado()
+#load_dataset_csv()
+# from datasets import load_dataset
+# dataset = load_dataset("hackathon-pln-es/unam_tesis", split='train')
+# print(dataset)
