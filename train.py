@@ -128,7 +128,7 @@ def get_split(text1):
 
 df['text_split'] = df["process_texto"].apply(get_split)
 
-df['text_split'].apply( lambda x: print(len(x)))
+# df['text_split'].apply( lambda x: print(len(x)))
 
 print("Size to items ")
 
