@@ -75,8 +75,8 @@ columns_name = ['texto', 'autor_nombre', 'autor_apellido', 'titulo', 'año', 'ca
 if args.typedata != False :
     columns_name = ['texto','titulo','carrera']
     FILE_NAME = 'dataset_tesis_procesado.csv'
-#encoding='ISO-8859-1'
-df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =columns_name , encoding='UTF-8', sep='|', engine='python', header=None,skiprows = 1)
+# encoding='UTF-8'
+df = pd.read_csv( DIRECTORY_ADDRES + os.path.sep + FILE_NAME, names =columns_name ,encoding='ISO-8859-1' , sep='|', engine='python', header=None,skiprows = 1)
 
 train_option = ['titulo','texto','both','both-rev']
 train_field = args.train_field
@@ -125,8 +125,21 @@ def get_split(text1):
 
 df['text_split'] = df["process_texto"].apply(get_split)
 
-print (df.head())
+df['text_split'].apply( lambda x: print(len(x)))
 
+print("Size to items ")
+
+#Concat all element in text_split in only column and put the same classification value
+data = [(row.carrera,sample) for row in df.itertuples() for sample in row.text_split]
+# data = pd.DataFrame(data, columns=['carrera', 'texto'])
+# print(data)
+
+df = pd.DataFrame(data, columns=['carrera', 'texto'])
+print (df.head())
+#Rearrange all examples
+print(" Inicial size of samples: ", str(reviews.size))
+reviews = df['texto']
+print(" Current size of samples: ", str(reviews.size))
 #Evaluate data in file
 
 #reviews = df['text_split']
