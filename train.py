@@ -299,9 +299,11 @@ model.config.label2id = classNameIndexTuple
 model.config._num_labels = sizeOfClass ## replacing 9 by 13
 model.config.num_labels = sizeOfClass
 
+#lrRate = 4e-5
 
+lrRate = 1e-5
 optimizer = AdamW(model.parameters(),
-                  lr = 4e-5,
+                  lr = lrRate,
                   eps = 1e-6
                   )
 
