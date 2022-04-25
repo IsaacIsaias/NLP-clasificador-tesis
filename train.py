@@ -27,7 +27,7 @@ ROBERT_GOB_PLUS, ELECTRA, ELECTRA_SMALL")
 
 parser.add_argument("--train_field", default='titulo', type=str, help=" titulo, texto,  both, both-rev i.e., Name of UNAM thesis field to tuning the huggingface Spanish model")
 parser.add_argument("--train_batch_size",
-                        default=32,
+                        default=16,
                         type=int,
                         help="Total batch size for training.")
 parser.add_argument("--eval_batch_size",
@@ -338,6 +338,12 @@ def flat_accuracy(preds, labels):
     labels_flat = labels.flatten()
     return np.sum(pred_flat == labels_flat) / len(labels_flat)
 
+#function to compute accuracy
+def flat_f1(preds, labels,labels_tag):
+    pred_flat = np.argmax(preds, axis=1).flatten()
+    labels_flat = labels.flatten()
+    return     metrics.f1_score(labels_flat, pred_flat, labels=list(labels_tag), average='macro')
+
 #Por último definimos la función que se encargará de entrenar
 # el modelo y también de entregar los resultados en el set de validación.
 
@@ -428,7 +434,7 @@ def training(n_epochs, training_dataloader,
         model.eval()
 
         # Tracking variables
-        eval_loss, eval_accuracy = 0, 0
+        eval_loss, eval_accuracy, eval_f1= 0, 0, 0
         all_logits = []
         all_labels = []
         # Evaluate data for one epoch
@@ -468,19 +474,22 @@ def training(n_epochs, training_dataloader,
                 logits, b_labels)
             # Accumulate the total accuracy.
             eval_accuracy += tmp_eval_accuracy
+            eval_f1 += flat_f1(logits, b_labels, labels_tag)
 
-        # Report the final accuracy for this validation run.
+            # Report the final accuracy for this validation run.
         f1 = metrics.f1_score(all_labels, all_logits, labels=list(labels_tag), average='macro')
 
         print("  Accuracy: {0:.2f}".
               format(eval_accuracy / (step + 1)))
         print("  F1-Macro: {0:.2f}".
               format(f1 / (step + 1)))
+        print("  F1-Macro-Local: {0:.2f}".
+              format(eval_f1 / (step + 1)))
         print("  Validation took: {:}".format(
             format_time(time.time() - t0)))
 
         eval_accu.append(eval_accuracy / (step + 1))
-        eval_f1.append(f1 / (step + 1))
+        #eval_f1.append(f1 / (step + 1))
 
 
     # print the confusion matrix"
