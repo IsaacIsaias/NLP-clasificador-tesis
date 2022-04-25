@@ -489,7 +489,7 @@ def training(n_epochs, training_dataloader,
             format_time(time.time() - t0)))
 
         eval_accu.append(eval_accuracy / (step + 1))
-        eval_f1.append(f1 / (step + 1))
+        eval_f1.append(eval_local_f1 / (step + 1))
 
 
     # print the confusion matrix"
