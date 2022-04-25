@@ -310,6 +310,7 @@ optimizer = AdamW(model.parameters(),
 if run_on == 'cuda':
     model.cuda()
 
+
 # Define number of epochs
 
 epochs = args.num_train_epochs
