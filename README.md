@@ -43,7 +43,7 @@ Se creó un demo con [Gradio](https://github.com/gradio-app/gradio) disponible e
 "Esta base de datos/modelo se ha creado/entrenado en el marco del Hackathon 2022 de PLN en Español organizado por Somos NLP patrocinado por Platzi, Paperspace y Hugging Face: https://huggingface.co/hackathon-pln-es."
 
 Miembros del equipo (user de Hugging Face):
-- Isacc Isahias López López (MajorIsaiah)
+- Isaac Isaías López López (MajorIsaias)
 - Dionis López (inoid)
 - Yisel Clavel Quintero (clavel)
 - Ximena Yeraldin López López (Ximyer)
